@@ -6,24 +6,30 @@
   <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex">
   <title>กะวอ</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=8.0">
 </head>
 <body>
   <header class="top">
     <div class="brand">🏠 กะวอ</div>
     <div id="who" class="who" hidden></div>
   </header>
-
-  <nav id="tabs" class="tabs" role="tablist" hidden></nav>
+  <div id="banners"></div>
 
   <main id="view" class="view">
     <p class="status">กำลังโหลด…</p>
   </main>
-
   <footer id="foot" class="foot"></footer>
 
+  <nav id="nav" class="nav" hidden aria-label="เมนูหลัก"></nav>
+
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <!-- ?v= makes phones fetch the new files after a deploy instead of a cached old copy -->
+  <script src="config.js?v=8.0"></script>
+  <script src="core.js?v=8.0"></script>
+  <script src="views-fridge.js?v=8.0"></script>
+  <script src="views-shop.js?v=8.0"></script>
+  <script src="views-home.js?v=8.0"></script>
+  <script src="views-settings.js?v=8.0"></script>
+  <script>KAWO.start();</script>
 </body>
 </html>

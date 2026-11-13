@@ -1,0 +1,238 @@
+/*
+ * ตั้งค่า: สมาชิก (roles), ของ (Dictionary), งานบ้าน (chores), เมนู (recipes).
+ * Viewers see everything with the controls disabled; the server refuses their writes anyway.
+ */
+(function () {
+  'use strict';
+  const K = window.KAWO, el = K.el;
+  let sub = 'members';
+  let dictQuery = '';
+
+  const field = function (label, input) { return el('label', { class: 'field' }, [el('span', { text: label }), input]); };
+  const select = function (options, value) {
+    return el('select', {}, options.map(function (o) { return el('option', { value: o.v, selected: String(o.v) === String(value) ? true : null, text: o.t }); }));
+  };
+  const numInput = function (v, placeholder) { return el('input', { type: 'number', inputmode: 'numeric', min: '0', value: v === null || v === undefined ? '' : String(v), placeholder: placeholder || '' }); };
+
+  /* ---------------- สมาชิก ---------------- */
+  function renderMembers(wrap) {
+    const can = K.canEdit();
+    wrap.appendChild(el('p', { class: 'hint', text: 'คนที่เคยพิมพ์ในกลุ่มหรือเปิดแอปจะมาอยู่ที่นี่ · แก้ไขได้ = บอทตอบ + กดปุ่มแก้ไขได้ · ดูอย่างเดียว = ดูได้ทุกหน้า บอทไม่ตอบ' }));
+    wrap.appendChild(K.group('สมาชิก (' + K.S.members.length + ')', K.S.members.map(function (m) {
+      const sel = select([{ v: 'editor', t: 'แก้ไขได้' }, { v: 'viewer', t: 'ดูอย่างเดียว' }], m.role);
+      sel.disabled = !can || m.owner;
+      sel.setAttribute('aria-label', 'สิทธิ์ของ ' + m.name);
+      sel.addEventListener('change', async function () {
+        const res = await K.write('setRole', { key: m.key, role: sel.value });
+        if (!res.ok) sel.value = m.role;
+      });
+      return el('div', { class: 'row' }, [
+        el('div', { class: 'main' }, [m.name + (m.me ? ' (ฉัน)' : ''), m.owner ? el('span', { class: 'sub', text: '👑 เจ้าของ เปลี่ยนสิทธิ์ไม่ได้' }) : null]),
+        sel,
+      ]);
+    })));
+  }
+
+  /* ---------------- ของ (Dictionary) ---------------- */
+  function dictForm(d) {
+    const meta = K.S.meta, isNew = !d;
+    d = d || { name: '', aliases: '', cat: 'Other', loc: 'Fridge', type: 'piece', unit: '', defQty: null, fridge: null, chill: null, freezer: null };
+    K.sheet(function (close) {
+      const can = K.canEdit();
+      const name = el('input', { value: d.name, maxlength: '40', placeholder: 'เช่น ไก่', readonly: isNew ? null : true });
+      const aliases = el('input', { value: d.aliases, placeholder: 'คั่นด้วย , เช่น chicken, อกไก่' });
+      const cat = select(meta.cats.map(function (c) { return { v: c.id, t: c.icon + ' ' + c.th }; }), d.cat);
+      const loc = select(meta.locs.map(function (l) { return { v: l.id, t: l.icon + ' ' + l.th }; }), d.loc);
+      const type = select(meta.types.map(function (t) { return { v: t.id, t: t.th }; }), d.type);
+      const unit = el('input', { value: d.unit, maxlength: '12', placeholder: 'เช่น ฟอง กล่อง หัว' });
+      const defQty = numInput(d.defQty, '1');
+      const fridge = numInput(d.fridge, 'ตามประเภท'), chill = numInput(d.chill, '-'), freezer = numInput(d.freezer, 'ไม่แช่');
+      const unitField = field('หน่วย (ชิ้น)', unit), defField = field('จำนวนปกติ (ไม่ใส่ตัวเลข = เท่านี้)', defQty);
+      const sync = function () { unitField.hidden = type.value !== 'piece'; defField.hidden = type.value === 'flag'; };
+      type.addEventListener('change', sync); sync();
+      const save = function () {
+        close();
+        K.write('dictSave', { row: isNew ? null : d.row, name: name.value.trim(), aliases: aliases.value, cat: cat.value, loc: loc.value, type: type.value,
+          unit: unit.value, defQty: defQty.value, fridge: fridge.value, chill: chill.value, freezer: freezer.value });
+      };
+      return [
+        el('h3', { text: isNew ? 'เพิ่มของใหม่' : d.name }),
+        el('div', { class: 'sub', text: isNew ? 'ชื่อเปลี่ยนทีหลังไม่ได้' : 'แก้แล้วใช้กับของที่เพิ่มใหม่ ของในตู้ตอนนี้ไม่เปลี่ยน' }),
+        isNew ? field('ชื่อ', name) : null,
+        field('ชื่ออื่นที่พิมพ์ได้', aliases),
+        el('div', { class: 'field row2' }, [field('ประเภท', cat), field('เก็บที่', loc)]),
+        field('ชนิด: ชิ้น = นับ · ที่ = จำนวนที่ (เนื้อสัตว์) · มี/หมด = ไม่นับ', type),
+        el('div', { class: 'field row2' }, [unitField, defField]),
+        el('div', { class: 'field row2' }, [field('วันในตู้เย็น', fridge), field('วันใน Chill', chill), field('วันในช่องฟรีซ', freezer)]),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
+          el('button', { class: 'btn primary', type: 'button', disabled: !can, text: 'บันทึก', on: { click: save } }),
+        ]),
+      ];
+    });
+  }
+
+  function renderDict(wrap) {
+    const can = K.canEdit();
+    const input = el('input', { class: 'search', type: 'search', placeholder: 'ค้นหา', value: dictQuery, 'aria-label': 'ค้นหาของ' });
+    const box = el('div');
+    const draw = function () {
+      dictQuery = input.value;
+      const q = dictQuery.trim().toLowerCase();
+      const list = K.S.dict.filter(function (d) { return !q || d.name.toLowerCase().indexOf(q) >= 0 || d.aliases.toLowerCase().indexOf(q) >= 0; });
+      const typeTh = {}; K.S.meta.types.forEach(function (t) { typeTh[t.id] = t.th; });
+      box.replaceChildren(K.group('ของ (' + list.length + ')', list.slice(0, 150).map(function (d) {
+        const bits = [K.catTh(d.cat), K.locTh(d.loc), typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
+        return el('button', { class: 'row', type: 'button', on: { click: function () { dictForm(d); } } }, [
+          el('div', { class: 'main' }, [d.name, el('span', { class: 'sub', text: bits.join(' · ') })]), el('span', { class: 'end', text: '✏️' }),
+        ]);
+      })));
+    };
+    input.addEventListener('input', draw);
+    wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '+ เพิ่มของใหม่', on: { click: function () { dictForm(null); } } })]));
+    wrap.appendChild(input);
+    wrap.appendChild(box);
+    draw();
+  }
+
+  /* ---------------- งานบ้าน ---------------- */
+  function choreForm(c) {
+    const isNew = !c;
+    c = c || { task: '', every: 7, ownerRule: 'Alternate', active: true };
+    K.sheet(function (close) {
+      const can = K.canEdit();
+      const task = el('input', { value: c.task, maxlength: '60', placeholder: 'เช่น ล้างแอร์' });
+      const every = el('input', { type: 'number', inputmode: 'numeric', min: '1', max: '365', value: String(c.every) });
+      const owner = select([{ v: 'Alternate', t: 'สลับกัน' }].concat(K.S.meta.household.map(function (h) { return { v: h, t: h }; })), c.ownerRule);
+      const send = function (active) {
+        close();
+        K.write('choreSave', { row: isNew ? null : c.row, orig: isNew ? null : c.task, task: task.value.trim(), every: Number(every.value), ownerRule: owner.value, active: active });
+      };
+      return [
+        el('h3', { text: isNew ? 'เพิ่มงานบ้าน' : c.task }),
+        !isNew && !c.active ? el('div', { class: 'sub', text: '📦 อยู่ในคลัง (ไม่เตือน ประวัติยังอยู่)' }) : null,
+        field('ชื่องาน', task),
+        el('div', { class: 'field row2' }, [field('ทำทุกกี่วัน', every), field('ใครทำ', owner)]),
+        el('div', { class: 'btns' }, [
+          !isNew && c.active ? el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '📦 เก็บเข้าคลัง', on: { click: function () { send(false); } } }) : null,
+          el('button', { class: 'btn primary', type: 'button', disabled: !can, text: !isNew && !c.active ? 'เอากลับมาใช้' : 'บันทึก', on: { click: function () { send(true); } } }),
+        ]),
+      ];
+    });
+  }
+
+  function renderChoreSettings(wrap) {
+    const can = K.canEdit();
+    const row = function (c) {
+      return el('button', { class: 'row' + (c.active ? '' : ' done'), type: 'button', on: { click: function () { choreForm(c); } } }, [
+        el('div', { class: 'main' }, [c.task, el('span', { class: 'sub', text: 'ทุก ' + c.every + ' วัน · ' + (c.ownerRule === 'Alternate' ? 'สลับกัน (รอบนี้ ' + c.owner + ')' : c.ownerRule) })]),
+        el('span', { class: 'end', text: '✏️' }),
+      ]);
+    };
+    wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '+ เพิ่มงานบ้าน', on: { click: function () { choreForm(null); } } })]));
+    const active = K.S.chores.filter(function (c) { return c.active; }), archived = K.S.chores.filter(function (c) { return !c.active; });
+    wrap.appendChild(K.group('ใช้อยู่ (' + active.length + ')', active.length ? active.map(row) : [el('div', { class: 'empty', text: 'ยังไม่มี' })]));
+    if (archived.length) wrap.appendChild(K.group('📦 คลัง (' + archived.length + ')', archived.map(row)));
+  }
+
+  /* ---------------- เมนู ---------------- */
+  /**
+   * Recipe editor. Ingredients come from the Dictionary picker, which is its own sheet: the form closes
+   * while picking and reopens afterwards (also on cancel) with everything typed so far.
+   */
+  function recipeForm(r) {
+    const isNew = !r;
+    const data = r ? JSON.parse(JSON.stringify(r.edit)) : { main: [], opt: [], seas: [] };
+    let close = null;
+    const can = K.canEdit();
+    const menu = el('input', { value: r ? r.menu : '', maxlength: '60', placeholder: 'เช่น ผัดกะเพราหมู' });
+    const notes = el('input', { value: r ? r.notes : '', maxlength: '200', placeholder: 'ไม่ใส่ก็ได้' });
+    const mainBox = el('div'), optBox = el('div'), seasBox = el('div');
+    const pick = function (title, onPick) { if (close) close(); K.pickItem(title, function (d) { onPick(d); open(); }, null, open); };
+
+    const groupEditor = function (box, groups, label) {
+      const draw = function () {
+        box.replaceChildren.apply(box, groups.map(function (alts, gi) {
+          const parts = [];
+          alts.forEach(function (n, ai) {
+            if (ai) parts.push(el('span', { class: 'or', text: 'หรือ' }));
+            parts.push(el('span', { class: 'chip' }, [n, el('button', { class: 'x', type: 'button', 'aria-label': 'เอา ' + n + ' ออก', text: '×',
+              on: { click: function () { alts.splice(ai, 1); if (!alts.length) groups.splice(gi, 1); draw(); } } })]));
+          });
+          parts.push(el('button', { class: 'chip add', type: 'button', text: '+ หรือ', on: { click: function () {
+            pick('ใช้แทน ' + alts[0] + ' ได้', function (d) { if (alts.indexOf(d.name) < 0) alts.push(d.name); });
+          } } }));
+          return el('div', { class: 'alt-group', style: 'margin-bottom:6px' }, parts);
+        }).concat([el('button', { class: 'chip add', type: 'button', text: '+ ' + label, on: { click: function () {
+          pick('เพิ่ม' + label, function (d) { groups.push([d.name]); });
+        } } })]));
+      };
+      draw();
+    };
+    const seasEditor = function () {
+      seasBox.replaceChildren(el('div', { class: 'chips' }, data.seas.map(function (n, i) {
+        return el('span', { class: 'chip' }, [n, el('button', { class: 'x', type: 'button', text: '×', 'aria-label': 'เอา ' + n + ' ออก', on: { click: function () { data.seas.splice(i, 1); seasEditor(); } } })]);
+      }).concat([el('button', { class: 'chip add', type: 'button', text: '+ เครื่องปรุง', on: { click: function () {
+        pick('เพิ่มเครื่องปรุง', function (d) { if (data.seas.indexOf(d.name) < 0) data.seas.push(d.name); });
+      } } })])));
+    };
+    const open = function () {
+      close = K.sheet(function (c) {
+        close = c;
+        groupEditor(mainBox, data.main, 'วัตถุดิบหลัก');
+        groupEditor(optBox, data.opt, 'ของเสริม');
+        seasEditor();
+        return [
+          el('h3', { text: isNew ? 'เพิ่มเมนู' : 'แก้เมนู' }),
+          el('div', { class: 'sub', text: 'วัตถุดิบเลือกจากรายการของ · "หรือ" = ใช้แทนกันได้' }),
+          field('ชื่อเมนู', menu),
+          el('div', { class: 'field' }, [el('span', { text: 'วัตถุดิบหลัก (ต้องมี)' }), mainBox]),
+          el('div', { class: 'field' }, [el('span', { text: 'ของเสริม (ไม่มีก็ทำได้)' }), optBox]),
+          el('div', { class: 'field' }, [el('span', { text: 'เครื่องปรุง' }), seasBox]),
+          field('โน้ต', notes),
+          el('div', { class: 'btns' }, [
+            !isNew ? el('button', { class: 'btn danger', type: 'button', disabled: !can, text: 'ลบเมนู', on: { click: function () {
+              c(); K.confirmSheet('ลบ "' + r.menu + '"?', 'ลบแล้วเอากลับไม่ได้', 'ลบ', function () { K.write('recipeRemove', { row: r.row, menu: r.menu }); }, true);
+            } } }) : null,
+            el('button', { class: 'btn primary', type: 'button', disabled: !can, text: 'บันทึก', on: { click: function () {
+              c();
+              K.write('recipeSave', { row: isNew ? null : r.row, orig: isNew ? null : r.menu, menu: menu.value.trim(), main: data.main, opt: data.opt, seas: data.seas, notes: notes.value.trim() });
+            } } }),
+          ]),
+        ];
+      });
+    };
+    open();
+  }
+
+  function renderRecipes(wrap) {
+    const can = K.canEdit();
+    wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '+ เพิ่มเมนู', on: { click: function () { recipeForm(null); } } })]));
+    const list = K.S.recipes.slice().sort(function (a, b) { return a.menu.localeCompare(b.menu, 'th'); });
+    wrap.appendChild(K.group('เมนู (' + list.length + ')', list.length ? list.map(function (r) {
+      const names = r.edit.main.map(function (a) { return a.join('/'); }).join(', ');
+      return el('button', { class: 'row', type: 'button', on: { click: function () { recipeForm(r); } } }, [
+        el('div', { class: 'main' }, [r.menu, el('span', { class: 'sub', text: names })]), el('span', { class: 'end', text: '✏️' }),
+      ]);
+    }) : [el('div', { class: 'empty', text: 'ยังไม่มีเมนู' })]));
+  }
+
+  /* ---------------- tab ---------------- */
+  const SUBS = [
+    { id: 'members', label: '👥 สมาชิก', render: renderMembers },
+    { id: 'dict', label: '🥬 ของ', render: renderDict },
+    { id: 'chores', label: '🧹 งานบ้าน', render: renderChoreSettings },
+    { id: 'recipes', label: '🍳 เมนู', render: renderRecipes },
+  ];
+
+  function render() {
+    const wrap = el('div');
+    wrap.appendChild(el('div', { class: 'seg', role: 'group' }, SUBS.map(function (s) {
+      return el('button', { type: 'button', 'aria-pressed': String(s.id === sub), text: s.label, on: { click: function () { sub = s.id; K.render(); } } });
+    })));
+    SUBS.filter(function (s) { return s.id === sub; })[0].render(wrap);
+    return wrap;
+  }
+
+  K.tab({ id: 'settings', icon: '⚙️', label: 'ตั้งค่า', render: render });
+})();

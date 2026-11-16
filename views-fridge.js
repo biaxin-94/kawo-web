@@ -22,22 +22,30 @@
   }
 
   /* ---------------- item actions ---------------- */
+  /**
+   * One item: ✅ ใช้ / 🗑 ทิ้ง use the stepper right here (starts at 1, max = what we have), so there's
+   * no separate "how many?" step. มี/หมด items and qty 1 have no stepper. 🧊 move keeps its own question.
+   */
   function openItem(it) {
     K.sheet(function (close) {
       const can = K.canEdit();
+      const word = K.unitWord(it.type, it.unit);
+      const st = can && it.type !== 'flag' && it.qty > 1 ? K.stepper(1, 1, it.qty, word) : null;
+      const n = function () { return st ? st.get() : it.qty; };
       const nodes = [
         el('h3', { text: it.name + (K.qtyText(it.type, it.qty, it.unit) ? ' ' + K.qtyText(it.type, it.qty, it.unit) : '') }),
         el('div', { class: 'sub', text: K.locTh(it.loc) + (it.exp ? ' · หมด ' + K.thDate(it.exp) + ' (' + K.leftText(it.left, it.exp) + ')' : '') + (it.added ? ' · ซื้อ ' + K.thDate(it.added) : '') }),
       ];
-      const act = function (a, dest) { close(); askAmount(it, a, dest); };
+      if (st) nodes.push(el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน (มี ' + it.qty + ' ' + word + ')' }), st.node]));
       nodes.push(el('div', { class: 'btns' }, [
-        el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { act('used'); } } }),
-        el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { act('toss'); } } }),
+        el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
+        el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { const k = n(); close(); doAct(it, 'toss', null, k); } } }),
       ]));
       if (it.loc !== 'Storage' && it.loc !== 'Freezer') {
+        const mv = function (dest) { close(); askMove(it, dest); };
         nodes.push(el('div', { class: 'btns' }, [
-          it.loc !== 'Chill' ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้า Chill', on: { click: function () { act('mv', 'Chill'); } } }) : null,
-          el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าช่องฟรีซ', on: { click: function () { act('mv', 'Freezer'); } } }),
+          it.loc !== 'Chill' ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
+          el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }),
         ]));
       }
       if (!can) nodes.push(el('p', { class: 'hint', text: 'ดูอย่างเดียว: แก้ไขไม่ได้' }));
@@ -45,22 +53,19 @@
     });
   }
 
-  const VERB = { used: 'ใช้', toss: 'ทิ้ง', mv: 'ย้าย' };
-
-  /** Quantity question depends on type: มี/หมด = none, ชิ้น/ที่ = how many (default all). */
-  function askAmount(it, act, dest) {
-    if (it.type === 'flag' || it.qty <= 1) return doAct(it, act, dest, it.qty);
+  /** 🧊 move: how many to move (default all), unchanged from v8.0. */
+  function askMove(it, dest) {
+    if (it.type === 'flag' || it.qty <= 1) return doAct(it, 'mv', dest, it.qty);
     K.sheet(function (close) {
       const word = K.unitWord(it.type, it.unit);
       const st = K.stepper(it.qty, 1, it.qty, word);
-      const title = it.type === 'serving' && act === 'used' ? 'ใช้ ' + it.name + ' ไปกี่ที่?' : VERB[act] + ' ' + it.name + ' กี่' + word + '?';
       return [
-        el('h3', { text: title }),
-        el('div', { class: 'sub', text: 'มี ' + it.qty + ' ' + word + (dest ? ' → ' + K.locTh(dest) : '') }),
+        el('h3', { text: 'ย้าย ' + it.name + ' กี่' + word + '?' }),
+        el('div', { class: 'sub', text: 'มี ' + it.qty + ' ' + word + ' → ' + K.locTh(dest) }),
         st.node,
         el('div', { class: 'btns' }, [
-          el('button', { class: 'btn', type: 'button', text: 'ทั้งหมด (' + it.qty + ')', on: { click: function () { close(); doAct(it, act, dest, it.qty); } } }),
-          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { close(); doAct(it, act, dest, st.get()); } } }),
+          el('button', { class: 'btn', type: 'button', text: 'ทั้งหมด (' + it.qty + ')', on: { click: function () { close(); doAct(it, 'mv', dest, it.qty); } } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { close(); doAct(it, 'mv', dest, st.get()); } } }),
         ]),
       ];
     });
@@ -92,14 +97,217 @@
     ]);
   }
 
+  /* ---------------- 🍳 ใช้ทำกับข้าว (use several items at once, v8.1) ---------------- */
+  /*
+   * Select mode on the ตู้เย็น tab: tick items from every location, set amounts (start at 1), confirm once.
+   * Kept on the phone (localStorage) like the shopping ticks. "ยืนยัน" freezes the batch with ONE request
+   * ID into pending; until the server answers, every retry (button, reopening the page, signal coming
+   * back) reuses that ID, so the server applies it at most once.
+   */
+  const COOK_KEY = 'kawo.cook.v1';
+  let cook = K.store.get(COOK_KEY, null);   // null | {sel: {id: n}, menu, main: [id], opt: [id], pending: {reqId, payload}}
+  let cookSending = false;
+  function saveCook() { if (cook) K.store.set(COOK_KEY, cook); else K.store.del(COOK_KEY); }
+  function itemById(id) { return K.S.items.filter(function (i) { return i.id === id; })[0] || null; }
+
+  function startCook(preset) {
+    if (!K.canEdit()) return;
+    cook = Object.assign({ sel: {}, menu: null, main: [], opt: [], pending: null }, preset || {});
+    saveCook();
+    K.go('fridge');
+  }
+
+  /** Best row of an ingredient for cooking: soonest-expiring outside the freezer first, then the freezer. */
+  function bestRow(name) {
+    const rows = K.S.items.filter(function (i) { return i.name === name; });
+    rows.sort(function (a, b) { return (a.loc === 'Freezer') - (b.loc === 'Freezer') || byExpiry(a, b); });
+    return rows[0] || null;
+  }
+
+  /** "ทำเมนูนี้": main ingredients we have, ticked at 1; optional ones we have, listed but not ticked. */
+  K.cookRecipe = function (r) {
+    const preset = { sel: {}, menu: r.menu, main: [], opt: [] };
+    r.main.forEach(function (m) {
+      const row = m.have ? bestRow(m.name) : null;
+      if (row && preset.main.indexOf(row.id) < 0) { preset.main.push(row.id); preset.sel[row.id] = row.type === 'flag' ? row.qty : 1; }
+    });
+    r.opt.forEach(function (m) {
+      const row = m.have ? bestRow(m.name) : null;
+      if (row && preset.main.indexOf(row.id) < 0 && preset.opt.indexOf(row.id) < 0) preset.opt.push(row.id);
+    });
+    startCook(preset);
+  };
+
+  function useText(it, n) {
+    return it.name + (it.type === 'flag' ? ' (หมด)' : ' ' + n + ' ' + K.unitWord(it.type, it.unit));
+  }
+
+  function cookRow(it, isOpt) {
+    const on = cook.sel[it.id] !== undefined;
+    const toggle = function () {
+      if (cook.pending) return;
+      if (on) delete cook.sel[it.id]; else cook.sel[it.id] = it.type === 'flag' ? it.qty : 1;
+      saveCook(); K.render();
+    };
+    let right = null;
+    if (on && it.type === 'flag') right = el('span', { class: 'end', text: 'หมด' });
+    else if (on && it.qty > 1 && !cook.pending) {
+      right = K.stepper(Math.min(cook.sel[it.id], it.qty), 1, it.qty, K.unitWord(it.type, it.unit), function (v) { cook.sel[it.id] = v; saveCook(); }).node;
+    } else if (on) right = el('span', { class: 'end', text: cook.sel[it.id] + ' ' + K.unitWord(it.type, it.unit) });
+    const where = K.locTh(it.loc) + (it.left !== null && it.loc !== 'Freezer' && it.loc !== 'Storage' ? ' · ' + K.leftText(it.left, it.exp) : '') + (isOpt ? ' · ของเสริม' : '');
+    return el('div', { class: 'row' + (on ? ' picked' : '') }, [
+      el('button', { class: 'check', type: 'button', disabled: !!cook.pending, 'aria-pressed': String(on), 'aria-label': 'ใช้ ' + it.name, text: on ? '✓' : '', on: { click: toggle } }),
+      el('div', { class: 'main', on: { click: toggle } }, [
+        it.name, K.qtyText(it.type, it.qty, it.unit) ? el('span', { class: 'qty', text: 'มี ' + K.qtyText(it.type, it.qty, it.unit) }) : null,
+        el('span', { class: 'sub', text: where }),
+      ]),
+      right,
+    ]);
+  }
+
+  function renderCook() {
+    // Items that are gone since the ticks were made (used elsewhere) simply drop out.
+    if (!cook.pending) Object.keys(cook.sel).forEach(function (id) { if (!itemById(id)) delete cook.sel[id]; });
+    const n = Object.keys(cook.sel).length;
+    const wrap = el('div', {}, [
+      el('h1', { class: 'title', text: '🍳 ใช้ทำกับข้าว' + (cook.menu ? ': ' + cook.menu : '') }),
+      el('p', { class: 'hint', text: cook.pending ? 'ยังไม่ได้บันทึก (สัญญาณอ่อน) กด "ส่งอีกครั้ง" ได้เลย ไม่บันทึกซ้ำ' : 'ติ๊กของที่ใช้ ปรับจำนวนได้ แล้วกดยืนยันทีเดียว' }),
+    ]);
+    const shown = {};
+    if (cook.menu) {
+      const mine = cook.main.concat(cook.opt).map(itemById).filter(Boolean);
+      mine.forEach(function (i) { shown[i.id] = true; });
+      if (mine.length) wrap.appendChild(K.group('ของในเมนูนี้', mine.map(function (i) { return cookRow(i, cook.opt.indexOf(i.id) >= 0); })));
+    }
+    FRIDGE_LOCS.concat(['Storage', 'other']).forEach(function (loc) {
+      const list = K.S.items.filter(function (i) {
+        if (shown[i.id]) return false;
+        return loc === 'other' ? FRIDGE_LOCS.indexOf(i.loc) < 0 && i.loc !== 'Storage' : i.loc === loc;
+      }).sort(byExpiry);
+      if (list.length) wrap.appendChild(K.group(loc === 'other' ? '📍 ที่อื่นๆ' : K.locTh(loc), list.map(function (i) { return cookRow(i, false); })));
+    });
+    wrap.appendChild(el('div', { class: 'pad-bottom' }));
+    wrap.appendChild(el('div', { class: 'storebar' }, cook.pending ? [
+      el('button', { class: 'btn primary', type: 'button', disabled: cookSending, text: cookSending ? 'กำลังส่ง…' : 'ส่งอีกครั้ง', on: { click: sendCook } }),
+    ] : [
+      el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: function () { cook = null; saveCook(); K.render(); } } }),
+      el('button', { class: 'btn primary', type: 'button', disabled: !n, text: 'ยืนยัน (' + n + ')', on: { click: cookConfirm } }),
+    ]));
+    return wrap;
+  }
+
+  /** Names this batch would use up: every row of that item fully used, and not on the list already (same rule as the server). */
+  function willRunOut(uses) {
+    const full = {};
+    uses.forEach(function (u) { full[u.id] = u.n >= u.it.qty; });
+    const names = [];
+    uses.forEach(function (u) {
+      const name = u.it.name;
+      if (names.indexOf(name) >= 0) return;
+      const allGone = K.S.items.filter(function (i) { return i.name === name; }).every(function (i) { return full[i.id]; });
+      const listed = K.S.list.some(function (l) { return l.name === name; });
+      if (allGone && !listed) names.push(name);
+    });
+    return names;
+  }
+
+  function cookConfirm() {
+    const uses = Object.keys(cook.sel).map(function (id) {
+      const it = itemById(id);
+      return it ? { id: id, it: it, n: it.type === 'flag' ? it.qty : Math.min(cook.sel[id], it.qty) } : null;
+    }).filter(Boolean);
+    if (!uses.length) return;
+    const out = willRunOut(uses);
+    const tick = {};
+    out.forEach(function (name) { tick[name] = true; });
+    K.sheet(function (close) {
+      return [
+        el('h3', { text: '🍳 ใช้ไป ' + uses.length + ' อย่าง' }),
+        el('p', { text: 'ใช้ไป: ' + uses.map(function (u) { return useText(u.it, u.n); }).join(', ') }),
+        out.length ? el('div', { class: 'banner warn' }, [
+          el('b', { text: '🛒 หมดแล้ว เพิ่มลงรายการซื้อไหม?' }),
+          el('div', {}, out.map(function (name) {
+            const box = el('input', { type: 'checkbox', checked: true, on: { change: function () { tick[name] = box.checked; } } });
+            return el('label', { class: 'tickline' }, [box, el('span', { text: ' ' + name })]);
+          })),
+        ]) : null,
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'กลับไปแก้', on: { click: close } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'ยืนยัน บันทึก', on: { click: function () {
+            close();
+            cook.pending = { reqId: K.newReqId(), payload: {
+              uses: uses.map(function (u) { return { id: u.id, n: u.n, name: u.it.name }; }),
+              offered: out,
+              addToList: out.filter(function (name) { return tick[name]; }),
+            } };
+            saveCook();
+            sendCook();
+          } } }),
+        ]),
+      ];
+    });
+  }
+
+  async function sendCook() {
+    if (!cook || !cook.pending || cookSending) return;
+    cookSending = true; K.render();
+    const res = await K.write('useItems', cook.pending.payload, { reqId: cook.pending.reqId, quiet: true, force: true });
+    cookSending = false;
+    if (res.ok) {
+      cook = null; saveCook(); K.render();
+      cookResult(res.data);
+    } else if (res.error === 'network' || res.error === 'auth' || res.error === 'server') {
+      K.render();   // keep pending: the same request ID is used next time
+    } else {
+      cook.pending = null; saveCook(); K.render();   // refused: nothing was applied, keep the ticks to fix
+    }
+  }
+
+  function cookResult(d) {
+    K.sheet(function (close) {
+      return [
+        el('h3', { text: d.used.length ? '✅ บันทึกแล้ว' : 'ไม่มีอะไรเปลี่ยน' }),
+        d.used.length ? el('p', { text: 'ใช้ไป: ' + d.used.join(', ') }) : null,
+        d.adjusted.length ? el('div', { class: 'banner warn', text: '⚠️ มีคนใช้ไปก่อนแล้ว ปรับจำนวน: ' + d.adjusted.join(', ') }) : null,
+        d.skipped.length ? el('div', { class: 'banner warn', text: '⚠️ ข้าม: ' + d.skipped.join(', ') }) : null,
+        d.listed.length ? el('p', { class: 'hint', text: '🛒 ใส่รายการซื้อแล้ว: ' + d.listed.join(', ') }) : null,
+        el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () {
+          close();
+          // Ran out, but the confirm screen couldn't know (someone used some meanwhile): ask now.
+          const names = d.notOffered || [];
+          if (names.length) {
+            K.confirmSheet('🛒 ' + names.join(', ') + ' หมดแล้ว', 'ใส่ในรายการซื้อไหม?', 'ใส่ในรายการ', async function () {
+              for (let i = 0; i < names.length; i++) await K.write('listAdd', { name: names[i] });
+            });
+          }
+        } } })]),
+      ];
+    });
+  }
+
+  /** On other tabs: reminder that a batch is waiting to be sent. */
+  function cookBanner() {
+    if (!cook || !cook.pending || K.current === 'fridge') return null;
+    return el('div', { class: 'banner warn' }, [
+      el('span', { text: '🍳 ยังไม่ได้บันทึกของที่ใช้ทำกับข้าว ' }),
+      el('button', { class: 'btn small', type: 'button', text: 'ดู', on: { click: function () { K.go('fridge'); } } }),
+    ]);
+  }
+  window.addEventListener('online', function () { if (cook && cook.pending && K.S.me) sendCook(); });
+
   /* ---------------- ตู้เย็น tab ---------------- */
   function renderFridge() {
+    if (cook && (K.canEdit() || cook.pending)) return renderCook();
     const S = K.S, days = S.meta.alertDays;
     const wrap = el('div');
     wrap.appendChild(el('div', { class: 'seg', role: 'group' }, [
       el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🧊 ตู้เย็น', on: { click: function () { part = 'fridge'; K.render(); } } }),
       el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '📦 ตู้เก็บของ', on: { click: function () { part = 'storage'; K.render(); } } }),
     ]));
+    // Viewers don't get this button at all (the server refuses their writes anyway).
+    if (K.canEdit() && S.items.length) {
+      wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: '🍳 ใช้ทำกับข้าว', on: { click: function () { startCook(); } } })]));
+    }
 
     if (part === 'storage') {
       const items = S.items.filter(function (i) { return i.loc === 'Storage'; }).sort(function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); });
@@ -142,7 +350,8 @@
   }
 
   K.tab({
-    id: 'fridge', icon: '🧊', label: 'ตู้เย็น', render: renderFridge,
+    id: 'fridge', icon: '🧊', label: 'ตู้เย็น', render: renderFridge, banner: cookBanner,
+    afterLoad: function () { if (cook && cook.pending) sendCook(); },   // reopened with an unsent batch: send it now
     badge: function () { return K.S.items.filter(function (i) { return i.loc !== 'Freezer' && i.loc !== 'Storage' && i.left !== null && i.left <= K.S.meta.alertDays; }).length; },
   });
 

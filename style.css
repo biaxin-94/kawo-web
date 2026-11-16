@@ -133,3 +133,12 @@ button.row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; bac
 .storebar .btn { flex: 1; }
 .pad-bottom { height: 70px; }
 .foot { color: var(--muted); font-size: 12px; text-align: center; padding: 0 16px 24px; }
+
+/* ---------- 🍳 ใช้ทำกับข้าว (v8.1) ---------- */
+.row .stepper { flex: 0 0 auto; }
+.row .stepper input { width: 40px; }
+.row .stepper button { width: 34px; }
+.amount { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 4px; }
+.tickline { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 15px; }
+.tickline input { width: 20px; height: 20px; }
+.sheet .banner { margin: 10px 0 0; }

@@ -1,5 +1,5 @@
 /*
- * กะวอ web app core (v8.0): login, server calls, app state, tabs, shared UI pieces.
+ * กะวอ web app core (v8.1): login, server calls, app state, tabs, shared UI pieces.
  * Each section (views-*.js) registers a tab with KAWO.tab({...}).
  * The page never decides permissions itself: the server checks every write. Viewers just see
  * disabled controls (KAWO.canEdit()) so they don't try.
@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '8.0';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '8.1';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',

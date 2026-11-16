@@ -63,6 +63,10 @@
         r.opt.length ? el('div', { class: 'group' }, [el('h2', { text: 'ใส่เพิ่มได้ (ไม่มีก็ทำได้)' }), el('div', { class: 'list' }, r.opt.map(ingLine))]) : null,
         r.seas.length ? el('p', { class: 'hint', text: '🧂 ' + r.seas.map(function (s) { return s.name + (s.warn ? ' ⚠️หมด' : ''); }).join(', ') }) : null,
         r.notes ? el('p', { class: 'hint', text: '📝 ' + r.notes }) : null,
+        // Viewers don't see this button at all
+        can && (r.main.some(function (m) { return m.have; }) || r.opt.some(function (m) { return m.have; }))
+          ? el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: '🍳 ทำเมนูนี้', on: { click: function () { close(); K.cookRecipe(r); } } })])
+          : null,
         el('div', { class: 'btns' }, [
           needMain ? el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '🛒 ใส่ที่ขาดในรายการ', on: { click: function () { add(false); } } }) : null,
           needOpt ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '🛒 รวมของเสริมด้วย', on: { click: function () { add(true); } } }) : null,

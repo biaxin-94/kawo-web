@@ -142,3 +142,6 @@ button.row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; bac
 .tickline { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 15px; }
 .tickline input { width: 20px; height: 20px; }
 .sheet .banner { margin: 10px 0 0; }
+
+/* ---------- Dictionary "ต้องตรวจ" flag (v10.0) ---------- */
+.row .tag { color: var(--warn-text); font-size: 12px; font-weight: 600; }

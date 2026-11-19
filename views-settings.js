@@ -58,6 +58,7 @@
       return [
         el('h3', { text: isNew ? 'เพิ่มของใหม่' : d.name }),
         el('div', { class: 'sub', text: isNew ? 'ชื่อเปลี่ยนทีหลังไม่ได้' : 'แก้แล้วใช้กับของที่เพิ่มใหม่ ของในตู้ตอนนี้ไม่เปลี่ยน' }),
+        d.review ? el('div', { class: 'banner warn', text: '🆕 กะวอเพิ่มอันนี้ให้จากเมนู โดยลอกค่าจากของที่คล้ายกัน ตรวจแล้วกดบันทึก ป้ายต้องตรวจจะหายไป' }) : null,
         isNew ? field('ชื่อ', name) : null,
         field('ชื่ออื่นที่พิมพ์ได้', aliases),
         el('div', { class: 'field row2' }, [field('ประเภท', cat), field('เก็บที่', loc)]),
@@ -79,14 +80,20 @@
     const draw = function () {
       dictQuery = input.value;
       const q = dictQuery.trim().toLowerCase();
-      const list = K.S.dict.filter(function (d) { return !q || d.name.toLowerCase().indexOf(q) >= 0 || d.aliases.toLowerCase().indexOf(q) >= 0; });
+      // v10.0: items กะวอ added from a chat menu are flagged "ต้องตรวจ" and listed first; saving the form clears the flag
+      const list = K.S.dict.filter(function (d) { return !q || d.name.toLowerCase().indexOf(q) >= 0 || d.aliases.toLowerCase().indexOf(q) >= 0; })
+        .sort(function (a, b) { return (b.review ? 1 : 0) - (a.review ? 1 : 0); });
       const typeTh = {}; K.S.meta.types.forEach(function (t) { typeTh[t.id] = t.th; });
-      box.replaceChildren(K.group('ของ (' + list.length + ')', list.slice(0, 150).map(function (d) {
-        const bits = [K.catTh(d.cat), K.locTh(d.loc), typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
-        return el('button', { class: 'row', type: 'button', on: { click: function () { dictForm(d); } } }, [
-          el('div', { class: 'main' }, [d.name, el('span', { class: 'sub', text: bits.join(' · ') })]), el('span', { class: 'end', text: '✏️' }),
-        ]);
-      })));
+      const reviewN = K.S.dict.filter(function (d) { return d.review; }).length;
+      box.replaceChildren(
+        reviewN ? el('div', { class: 'banner warn', text: '🆕 กะวอเพิ่มของใหม่จากเมนู ' + reviewN + ' อย่าง แตะเพื่อตรวจวันหมดอายุ หน่วย และที่เก็บ แล้วกดบันทึก' }) : el('span'),
+        K.group('ของ (' + list.length + ')', list.slice(0, 150).map(function (d) {
+          const bits = [K.catTh(d.cat), K.locTh(d.loc), typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
+          return el('button', { class: 'row' + (d.review ? ' soon' : ''), type: 'button', on: { click: function () { dictForm(d); } } }, [
+            el('div', { class: 'main' }, [d.name, d.review ? el('span', { class: 'tag', text: ' 🆕 ต้องตรวจ' }) : null, el('span', { class: 'sub', text: bits.join(' · ') })]),
+            el('span', { class: 'end', text: '✏️' }),
+          ]);
+        })));
     };
     input.addEventListener('input', draw);
     wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '+ เพิ่มของใหม่', on: { click: function () { dictForm(null); } } })]));

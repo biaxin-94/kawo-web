@@ -34,7 +34,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .who { font-size: 13px; color: var(--muted); text-align: right; }
 .who b { color: var(--text); }
 .role { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--chip); font-size: 12px; }
-.role.editor { color: var(--accent); }
+.role.editor, .role.admin { color: var(--accent); }
+.role.admin { font-weight: 700; }
+.brand .house { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.row[aria-current="true"] { background: var(--chip); }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.toggle input { width: 22px; height: 22px; }
 .banner { margin: 8px 16px 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
 .banner.warn { background: var(--warn-bg); color: var(--warn-text); }
 .banner.bad { background: var(--bad-bg); color: var(--bad-text); }

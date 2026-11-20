@@ -6,7 +6,7 @@
   const K = window.KAWO, el = K.el;
   const FRIDGE_LOCS = ['Fridge', 'Chill', 'Freezer', 'Pantry'];
   let part = 'fridge';                       // fridge | storage
-  const dismissed = K.store.get('kawo.freezeDismissed', {});
+  let dismissed = K.store.get(K.hkey('freezeDismissed'), {});   // v11.0: per household
 
   function byExpiry(a, b) {
     const la = a.left === null ? Infinity : a.left, lb = b.left === null ? Infinity : b.left;
@@ -41,11 +41,12 @@
         el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
         el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { const k = n(); close(); doAct(it, 'toss', null, k); } } }),
       ]));
-      if (it.loc !== 'Storage' && it.loc !== 'Freezer') {
+      const toChill = it.loc !== 'Chill' && K.zoneOn('Chill'), toFreezer = K.zoneOn('Freezer');   // v11.0: zones this household uses
+      if (it.loc !== 'Storage' && it.loc !== 'Freezer' && (toChill || toFreezer)) {
         const mv = function (dest) { close(); askMove(it, dest); };
         nodes.push(el('div', { class: 'btns' }, [
-          it.loc !== 'Chill' ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
-          el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }),
+          toChill ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
+          toFreezer ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }) : null,
         ]));
       }
       if (!can) nodes.push(el('p', { class: 'hint', text: 'ดูอย่างเดียว: แก้ไขไม่ได้' }));
@@ -90,7 +91,7 @@
     return el('div', { class: 'banner info' }, [
       el('div', { text: '🧊 ' + h.name + ' ' + h.total + ' ที่ แต่' + h.locTh + ' เก็บได้ ' + h.days + ' วัน แบ่งแช่ฟรีซ ' + h.freeze + ' ที่ไหม?' }),
       el('div', { class: 'btns' }, [
-        el('button', { class: 'btn small', type: 'button', text: 'ไม่ต้อง', on: { click: function () { dismissed[hintKey(h)] = 1; K.store.set('kawo.freezeDismissed', dismissed); K.render(); } } }),
+        el('button', { class: 'btn small', type: 'button', text: 'ไม่ต้อง', on: { click: function () { dismissed[hintKey(h)] = 1; K.store.set(K.hkey('freezeDismissed'), dismissed); K.render(); } } }),
         el('button', { class: 'btn small primary', type: 'button', disabled: !can, text: 'แช่ฟรีซ ' + h.freeze + ' ที่',
           on: { click: function () { K.write('itemAct', { id: h.id, act: 'mv', dest: 'Freezer', n: h.freeze, expectQty: h.qty }); } } }),
       ]),
@@ -104,10 +105,14 @@
    * ID into pending; until the server answers, every retry (button, reopening the page, signal coming
    * back) reuses that ID, so the server applies it at most once.
    */
-  const COOK_KEY = 'kawo.cook.v1';
-  let cook = K.store.get(COOK_KEY, null);   // null | {sel: {id: n}, menu, main: [id], opt: [id], pending: {reqId, payload}}
+  let cookKey = K.hkey('cook.v1');           // v11.0: per household
+  let cook = K.store.get(cookKey, null);   // null | {sel: {id: n}, menu, main: [id], opt: [id], pending: {reqId, payload, hh}}
   let cookSending = false;
-  function saveCook() { if (cook) K.store.set(COOK_KEY, cook); else K.store.del(COOK_KEY); }
+  function saveCook() { if (cook) K.store.set(cookKey, cook); else K.store.del(cookKey); }
+  K.onHousehold(function () {
+    cookKey = K.hkey('cook.v1'); cook = K.store.get(cookKey, null);
+    dismissed = K.store.get(K.hkey('freezeDismissed'), {});
+  });
   function itemById(id) { return K.S.items.filter(function (i) { return i.id === id; })[0] || null; }
 
   function startCook(preset) {
@@ -235,7 +240,7 @@
           el('button', { class: 'btn', type: 'button', text: 'กลับไปแก้', on: { click: close } }),
           el('button', { class: 'btn primary', type: 'button', text: 'ยืนยัน บันทึก', on: { click: function () {
             close();
-            cook.pending = { reqId: K.newReqId(), payload: {
+            cook.pending = { reqId: K.newReqId(), hh: K.hid, payload: {
               uses: uses.map(function (u) { return { id: u.id, n: u.n, name: u.it.name }; }),
               offered: out,
               addToList: out.filter(function (name) { return tick[name]; }),
@@ -250,16 +255,19 @@
 
   async function sendCook() {
     if (!cook || !cook.pending || cookSending) return;
+    // v11.0: the batch goes to the household it was made in, even if the page switched meanwhile
+    const c = cook, key = cookKey, hh = c.pending.hh === undefined ? K.hid : c.pending.hh;
     cookSending = true; K.render();
-    const res = await K.write('useItems', cook.pending.payload, { reqId: cook.pending.reqId, quiet: true, force: true });
+    const res = await K.write('useItems', c.pending.payload, { reqId: c.pending.reqId, quiet: true, force: true, hh: hh });
     cookSending = false;
+    const here = c === cook;
     if (res.ok) {
-      cook = null; saveCook(); K.render();
-      cookResult(res.data);
+      K.store.del(key);
+      if (here) { cook = null; K.render(); cookResult(res.data); }
     } else if (res.error === 'network' || res.error === 'auth' || res.error === 'server') {
       K.render();   // keep pending: the same request ID is used next time
     } else {
-      cook.pending = null; saveCook(); K.render();   // refused: nothing was applied, keep the ticks to fix
+      c.pending = null; K.store.set(key, c); K.render();   // refused: nothing was applied, keep the ticks to fix
     }
   }
 

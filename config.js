@@ -11,8 +11,8 @@
       API_URL: 'https://script.google.com/macros/s/AKfycbxWC0IDkCCdmTVcnJS0j_iBl9_Cu0kNstFWJ0IHe0S-_8ich4Cpi_xdJoxjp7XV7g1U/exec',
     },
     dev: {
-      LIFF_ID: '',   // dev LIFF app ID: fill in after creating it (see CLAUDE.md checklist)
-      API_URL: '',   // dev Apps Script /exec URL
+      LIFF_ID: '2012731478-47a0VJxY',
+      API_URL: 'https://script.google.com/macros/s/AKfycbzd-tEZGvRzrEAZo3Mf69OMjeGwv6Jk0qAvC1om-l9W9joEZ0qnULuhLqxA8V9KsTMy/exec',
     },
   };
   var env = /\/dev\//.test(location.pathname) ? 'dev' : 'prod';

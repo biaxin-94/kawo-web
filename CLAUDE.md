@@ -6,6 +6,9 @@ The back end (Google Apps Script, private repo `kawo-backend`) has the full proj
 - `index.html`, `style.css`: page shell. `core.js`: login (LIFF), API calls, state, tabs, shared UI.
   `views-fridge.js` (ตู้เย็น, เช็คของ), `views-shop.js` (ซื้อของ), `views-home.js` (งานบ้าน, ทำกิน),
   `views-settings.js` (ตั้งค่า). `config.js`: public LIFF ID + `/exec` URL per environment.
+- v11.0 households: every request carries `hh` (the household ID from the app link `?h=`, else the last one on
+  the phone); phone storage is per household (`K.hkey`), and the admin-only ⚙️ ตั้งค่าบ้าน lives in
+  `views-settings.js`. Household IDs are data too: never commit real ones here.
 - **This repo is public. Never put secrets here**: no tokens, keys, LINE user IDs, `?k=` webhook key.
   The server checks the LINE login and the role on every request; the page only hides buttons.
 

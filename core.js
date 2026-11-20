@@ -16,7 +16,7 @@
     bad_request: 'คำขอไม่ถูกต้อง ลองรีเฟรช',
     server: 'ระบบมีปัญหา ลองใหม่อีกครั้ง',
     network: 'ส่งไม่สำเร็จ สัญญาณอ่อนหรือไม่มีเน็ต ลองใหม่อีกครั้ง',
-    config: 'หน้าเว็บยังไม่ได้ตั้งค่า (LIFF_ID)',
+    config: 'หน้าเว็บยังไม่ได้ตั้งค่า (LIFF_ID / API_URL ใน config.js)',
     liff: 'เปิดผ่าน LINE ไม่สำเร็จ',
   };
 
@@ -258,6 +258,7 @@
     if (K.S.version && K.S.version !== APP_VERSION) {
       b.push(el('div', { class: 'banner bad', text: 'หน้าเว็บ v' + APP_VERSION + ' ไม่ตรงกับระบบ v' + K.S.version + ' ลองปิดแล้วเปิดใหม่ (ถ้ายังไม่หาย บอกเด๊ะ)' }));
     }
+    if (CFG.ENV === 'dev') b.push(el('div', { class: 'banner bad', text: '🧪 DEV: หน้าทดสอบ ใช้ข้อมูลชีตทดสอบ ไม่ใช่ของจริง' }));
     if (!K.canEdit()) b.push(el('div', { class: 'banner info', text: '👀 บัญชีนี้ดูได้อย่างเดียว ปุ่มแก้ไขจะกดไม่ได้' }));
     K.tabs.forEach(function (t) { if (t.banner) { const n = t.banner(); if (n) b.push(n); } });
     banners.replaceChildren.apply(banners, b);
@@ -276,7 +277,7 @@
 
     const tab = K.tabs.filter(function (t) { return t.id === K.current; })[0];
     K.$('view').replaceChildren(tab.render());
-    K.$('foot').textContent = 'ข้อมูลวันที่ ' + K.thDate(K.S.meta.today) + ' · หน้าเว็บ v' + APP_VERSION + ' · ระบบ v' + K.S.version;
+    K.$('foot').textContent = (CFG.ENV === 'dev' ? 'DEV · ' : '') + 'ข้อมูลวันที่ ' + K.thDate(K.S.meta.today) + ' · หน้าเว็บ v' + APP_VERSION + ' · ระบบ v' + K.S.version;
   };
 
   K.fatal = function (msg) {
@@ -294,7 +295,7 @@
       CFG.API_URL = '/api';
       K.idToken = 'good-token-for-' + as + '-padding-xxxxxxxx';
     } else {
-      if (!CFG.LIFF_ID || !window.liff) return K.fatal(ERRORS.config);
+      if (!CFG.LIFF_ID || !CFG.API_URL || !window.liff) return K.fatal(ERRORS.config);
       try {
         await liff.init({ liffId: CFG.LIFF_ID });
       } catch (e) {

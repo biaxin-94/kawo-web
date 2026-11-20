@@ -1,0 +1,69 @@
+# Publishes the web app to GitHub Pages, both environments in one site:
+#   main branch -> https://biaxin-94.github.io/kawo-web/       (prod, unchanged URL)
+#   dev branch  -> https://biaxin-94.github.io/kawo-web/dev/   (dev)
+# config.js picks the prod or dev API / LIFF ID from the path, so there is no build step.
+# One-time setting: repo Settings > Pages > Source = "GitHub Actions".
+# Deploy order per environment: back end first (kawo-backend Action), then push here.
+
+name: Publish web app
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout main (prod)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod
+
+      - name: Checkout dev (if the branch exists)
+        id: devbranch
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" dev >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.devbranch.outputs.exists == 'true'
+        with:
+          ref: dev
+          path: devsrc
+
+      - name: Assemble the site
+        run: |
+          mkdir site
+          # only the page files: no .git, .github, docs
+          cp prod/*.html prod/*.css prod/*.js site/
+          if [ -d devsrc ]; then
+            mkdir site/dev
+            cp devsrc/*.html devsrc/*.css devsrc/*.js site/dev/
+          fi
+          touch site/.nojekyll
+          ls -R site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

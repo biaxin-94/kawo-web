@@ -3,6 +3,8 @@
 #   dev branch  -> https://biaxin-94.github.io/kawo-web/dev/   (dev)
 # config.js picks the prod or dev API / LIFF ID from the path, so there is no build step.
 # One-time setting: repo Settings > Pages > Source = "GitHub Actions".
+# Only main may deploy to the github-pages environment (GitHub's default, kept on purpose), so a push to dev
+# doesn't publish by itself: it asks for a publish run on main, which picks up the newest dev branch.
 # Deploy order per environment: back end first (kawo-backend Action), then push here.
 
 name: Publish web app
@@ -22,7 +24,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  request-publish:
+    if: github.ref_name == 'dev'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Ask for a publish run on main (it includes the dev branch at /dev/)
+        run: gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   publish:
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

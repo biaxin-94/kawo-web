@@ -313,10 +313,13 @@
       el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🧊 ตู้เย็น', on: { click: function () { part = 'fridge'; K.render(); } } }),
       el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '📦 ตู้เก็บของ', on: { click: function () { part = 'storage'; K.render(); } } }),
     ]));
-    // Viewers don't get this button at all (the server refuses their writes anyway).
-    if (K.canEdit() && S.items.length) {
-      wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: '🍳 ใช้ทำกับข้าว', on: { click: function () { startCook(); } } })]));
-    }
+    // v12.0: เช็กของ, 🍳 ใช้ทำกับข้าว and ทำอะไรกินดี open from here (they used to be tabs / a button).
+    // Viewers don't get 🍳 at all (the server refuses their writes anyway); the other two are read-only for them.
+    wrap.appendChild(el('div', { class: 'tools' }, [
+      el('button', { class: 'btn', type: 'button', text: '📋 เช็กของ', on: { click: function () { K.go('stock'); } } }),
+      K.canEdit() && S.items.length ? el('button', { class: 'btn primary', type: 'button', text: '🍳 ใช้ทำกับข้าว', on: { click: function () { startCook(); } } }) : null,
+      el('button', { class: 'btn', type: 'button', text: '🍽 ทำอะไรกินดี', on: { click: function () { K.go('cook'); } } }),
+    ]));
 
     if (part === 'storage') {
       const items = S.items.filter(function (i) { return i.loc === 'Storage'; }).sort(function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); });
@@ -390,5 +393,5 @@
     return wrap;
   }
 
-  K.tab({ id: 'stock', icon: '📋', label: 'เช็คของ', render: renderStock });
+  K.tab({ id: 'stock', icon: '📋', label: 'เช็กของ', render: renderStock, nav: false, parent: 'fridge' });
 })();

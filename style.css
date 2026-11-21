@@ -150,3 +150,16 @@ button.row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; bac
 
 /* ---------- Dictionary "ต้องตรวจ" flag (v10.0) ---------- */
 .row .tag { color: var(--warn-text); font-size: 12px; font-weight: 600; }
+
+/* v12.0: ⚙️ in the top corner, ← back bar for pages inside a tab, ประวัติ */
+.topright { display: flex; align-items: center; gap: 8px; }
+.gear { font-size: 20px; line-height: 1; background: none; border: 0; padding: 6px; border-radius: 10px; cursor: pointer; }
+.gear[aria-pressed="true"] { background: var(--chip); }
+.backbar { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.tools .btn { flex: 1 1 30%; min-width: 0; }
+.filters { display: flex; gap: 6px; margin: 8px 0; }
+.filters select { flex: 1; min-width: 0; }
+.day { margin: 14px 0 4px; font-weight: 700; color: var(--muted); font-size: 14px; }
+.hist .row { align-items: flex-start; }
+.hist .time { color: var(--muted); font-size: 12px; min-width: 40px; }

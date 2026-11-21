@@ -306,17 +306,32 @@
   };
 
   /* ---------------- tabs + rendering ---------------- */
-  const TAB_ORDER = ['fridge', 'shop', 'stock', 'chores', 'cook', 'settings'];
+  /*
+   * v12.0 layout: exactly 4 tabs in the bottom bar (fridge = landing, shop, chores, history). Every other page is a
+   * tab with nav: false: เช็กของ and ทำอะไรกินดี open from ตู้เย็น (parent: 'fridge', with a ← back bar), all
+   * settings open from ⚙️ in the top corner. A future page goes inside one of the 4 tabs or under ⚙️.
+   */
+  const TAB_ORDER = ['fridge', 'shop', 'chores', 'history', 'stock', 'cook', 'settings'];
+  const LANDING = 'fridge';
+  let lastMain = LANDING;   // where ← goes back to from ⚙️
   K.tab = function (t) {
     K.tabs.push(t);
     K.tabs.sort(function (a, b) { return TAB_ORDER.indexOf(a.id) - TAB_ORDER.indexOf(b.id); });
   };
 
   K.go = function (id) {
+    const from = K.tabs.filter(function (t) { return t.id === K.current; })[0];
+    if (from && from.nav !== false) lastMain = from.id;
     K.current = id;
     K.store.set('kawo.tab', id);
+    const t = K.tabs.filter(function (x) { return x.id === id; })[0];
+    if (t && t.onEnter) t.onEnter();
     K.render();
     window.scrollTo(0, 0);
+  };
+  K.back = function () {
+    const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
+    K.go((t && t.parent) || lastMain || LANDING);
   };
 
   K.renderBusy = function () { document.body.style.cursor = K.busy ? 'progress' : ''; };
@@ -346,10 +361,12 @@
     banners.replaceChildren.apply(banners, b);
 
     const nav = K.$('nav');
-    if (!K.tabs.some(function (t) { return t.id === K.current; })) K.current = K.tabs[0].id;
-    nav.replaceChildren.apply(nav, K.tabs.map(function (t) {
+    if (!K.tabs.some(function (t) { return t.id === K.current; })) K.current = LANDING;
+    const tab = K.tabs.filter(function (t) { return t.id === K.current; })[0];
+    const here = tab.nav === false ? (tab.parent || '') : tab.id;   // a page inside a tab lights up that tab
+    nav.replaceChildren.apply(nav, K.tabs.filter(function (t) { return t.nav !== false; }).map(function (t) {
       const badge = t.badge ? t.badge() : 0;
-      return el('button', { type: 'button', 'aria-current': t.id === K.current ? 'page' : null, on: { click: function () { K.go(t.id); } } }, [
+      return el('button', { type: 'button', 'aria-current': t.id === here ? 'page' : null, on: { click: function () { K.go(t.id); } } }, [
         el('span', { class: 'ic', text: t.icon }),
         el('span', { text: t.label }),
         badge ? el('span', { class: 'dot', text: String(badge) }) : null,
@@ -357,8 +374,20 @@
     }));
     nav.hidden = false;
 
-    const tab = K.tabs.filter(function (t) { return t.id === K.current; })[0];
-    K.$('view').replaceChildren(tab.render());
+    const gear = K.$('gear');
+    gear.hidden = false;
+    gear.setAttribute('aria-pressed', String(K.current === 'settings'));
+    const page = tab.render();
+    if (tab.nav === false) {
+      // ← back bar for pages that aren't one of the 4 tabs
+      const parent = K.tabs.filter(function (t) { return t.id === tab.parent; })[0];
+      K.$('view').replaceChildren(el('div', { class: 'backbar' }, [
+        el('button', { class: 'btn small', type: 'button', text: '← ' + (parent ? parent.label : 'กลับ'), on: { click: K.back } }),
+        el('b', { text: tab.icon + ' ' + tab.label }),
+      ]), page);
+    } else {
+      K.$('view').replaceChildren(page);
+    }
     K.$('foot').textContent = (CFG.ENV === 'dev' ? 'DEV · ' : '') + 'ข้อมูลวันที่ ' + K.thDate(K.S.meta.today) + ' · หน้าเว็บ v' + APP_VERSION + ' · ระบบ v' + K.S.version;
   };
 
@@ -368,7 +397,8 @@
 
   /* ---------------- start ---------------- */
   K.start = async function () {
-    K.current = K.store.get('kawo.tab', null);
+    K.current = LANDING;   // v12.0: always open on ตู้เย็น
+    K.$('gear').addEventListener('click', function () { if (K.current === 'settings') K.back(); else K.go('settings'); });
     // Local testing only (http://localhost): talk to the test server without LINE. The real server
     // rejects these fake tokens, so this does nothing on the published page.
     const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);

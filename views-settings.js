@@ -350,5 +350,5 @@
     return wrap;
   }
 
-  K.tab({ id: 'settings', icon: '⚙️', label: 'ตั้งค่า', render: render });
+  K.tab({ id: 'settings', icon: '⚙️', label: 'ตั้งค่า', render: render, nav: false });   // opened from ⚙️ (top corner)
 })();

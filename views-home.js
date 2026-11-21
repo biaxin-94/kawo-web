@@ -98,5 +98,5 @@
     return wrap;
   }
 
-  K.tab({ id: 'cook', icon: '🍳', label: 'ทำกิน', render: renderCook });
+  K.tab({ id: 'cook', icon: '🍽', label: 'ทำอะไรกินดี', render: renderCook, nav: false, parent: 'fridge' });
 })();

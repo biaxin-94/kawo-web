@@ -10,12 +10,18 @@
 (function () {
   'use strict';
   const K = window.KAWO, el = K.el;
-  const KEY = 'kawo.shop.v1';
-  let shop = K.store.get(KEY, null) || {};
-  shop.mode = shop.mode || 'plan';
-  shop.picks = shop.picks || {};       // name -> qty picked in the store
-  shop.extras = shop.extras || [];     // [{name, qty}] bought but not on the list
-  shop.pending = shop.pending || null; // {reqId, payload, at}
+  let KEY = K.hkey('shop.v1');         // v11.0: 'kawo.<household>.shop.v1'
+  let shop = null;
+  function loadShop() {
+    KEY = K.hkey('shop.v1');
+    shop = K.store.get(KEY, null) || {};
+    shop.mode = shop.mode || 'plan';
+    shop.picks = shop.picks || {};       // name -> qty picked in the store
+    shop.extras = shop.extras || [];     // [{name, qty}] bought but not on the list
+    shop.pending = shop.pending || null; // {reqId, payload, at, hh}
+  }
+  loadShop();
+  K.onHousehold(loadShop);
   let sending = false;
   const save = function () { if (!K.store.set(KEY, shop)) K.toast('บันทึกในเครื่องไม่ได้ (โหมดส่วนตัว?) อย่าปิดหน้านี้ก่อนยืนยัน', true); };
 
@@ -155,7 +161,7 @@
           el('button', { class: 'btn', type: 'button', text: 'กลับไปหยิบต่อ', on: { click: close } }),
           el('button', { class: 'btn primary', type: 'button', text: 'ยืนยัน บันทึก', on: { click: function () {
             close();
-            shop.pending = { reqId: K.newReqId(), payload: { picks: picks, extras: shop.extras.slice() }, at: Date.now() };
+            shop.pending = { reqId: K.newReqId(), payload: { picks: picks, extras: shop.extras.slice() }, at: Date.now(), hh: K.hid };
             save();
             send();
           } } }),
@@ -166,24 +172,26 @@
 
   async function send() {
     if (!shop.pending || sending) return;
+    // v11.0: the trip goes to the household it was made in, even if the page switched household meanwhile
+    const s = shop, key = KEY, hh = s.pending.hh === undefined ? K.hid : s.pending.hh;
     sending = true; K.render();
-    const res = await K.call('shopConfirm', shop.pending.payload, shop.pending.reqId);
+    const res = await K.call('shopConfirm', s.pending.payload, s.pending.reqId, hh);
     sending = false;
+    const here = s === shop && hh === K.hid;
     if (res.ok) {
-      K.absorb(res);
-      const sentPicks = shop.pending.payload.picks.map(function (p) { return p.name; });
-      sentPicks.forEach(function (n) { delete shop.picks[n]; });
-      shop.extras = [];
-      shop.pending = null;
-      shop.mode = 'plan';
-      save(); K.render();
-      showResult(res.data);
+      const sentPicks = s.pending.payload.picks.map(function (p) { return p.name; });
+      sentPicks.forEach(function (n) { delete s.picks[n]; });
+      s.extras = [];
+      s.pending = null;
+      s.mode = 'plan';
+      K.store.set(key, s);
+      if (here) { K.absorb(res); K.render(); showResult(res.data); } else K.toast('บันทึกของที่ซื้อของอีกบ้านแล้ว');
     } else if (res.error === 'network' || res.error === 'auth' || res.error === 'server') {
-      save(); K.render();   // keep pending: same request ID next time
+      K.store.set(key, s); K.render();   // keep pending: same request ID next time
       K.toast(res.error === 'auth' ? 'ยังไม่ได้บันทึก: ปิดแล้วเปิดหน้านี้ใหม่จาก LINE ระบบจะส่งให้เอง' : 'ยังไม่ได้บันทึก (สัญญาณอ่อน) ติ๊กยังอยู่ครบ กด "ส่งอีกครั้ง" ได้เลย', true);
     } else {
-      shop.pending = null;   // the server refused it: nothing was applied, keep the ticks so they can fix it
-      save(); K.render();
+      s.pending = null;   // the server refused it: nothing was applied, keep the ticks so they can fix it
+      K.store.set(key, s); K.render();
       K.toast(K.errorText(res), true);
     }
   }

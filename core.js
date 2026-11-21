@@ -1,18 +1,22 @@
 /*
- * กะวอ web app core (v10.0): login, server calls, app state, tabs, shared UI pieces.
+ * กะวอ web app core (v13.0): login, server calls, app state, tabs, shared UI pieces.
  * Each section (views-*.js) registers a tab with KAWO.tab({...}).
  * The page never decides permissions itself: the server checks every write. Viewers just see
  * disabled controls (KAWO.canEdit()) so they don't try.
+ * v11.0: several households. K.hid = the household this page is showing (from the app link ?h=, else the
+ * last one used on this phone); every request carries it and the server checks the person belongs to it.
+ * Phone storage is kept per household (K.hkey); views reload theirs when the household changes (K.onHousehold).
  */
 (function () {
   'use strict';
 
-  const APP_VERSION = '10.0';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '13.1';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
     forbidden: 'บัญชีนี้ดูได้อย่างเดียว แก้ไขไม่ได้',
     unknown_action: 'หน้าเว็บกับระบบเป็นคนละเวอร์ชัน ลองรีเฟรช',
+    no_household: 'บัญชีนี้ยังไม่ได้อยู่ในบ้านนี้ เปิดแอปจากลิงก์ในกลุ่มไลน์ของบ้าน (พิมพ์ "แอป" ในกลุ่ม)',
     bad_request: 'คำขอไม่ถูกต้อง ลองรีเฟรช',
     server: 'ระบบมีปัญหา ลองใหม่อีกครั้ง',
     network: 'ส่งไม่สำเร็จ สัญญาณอ่อนหรือไม่มีเน็ต ลองใหม่อีกครั้ง',
@@ -22,7 +26,8 @@
 
   const K = window.KAWO = {
     APP_VERSION: APP_VERSION,
-    S: { me: null, version: '', meta: null, items: [], list: [], chores: [], recipes: [], dict: [], members: [], freezeHints: [] },
+    S: { me: null, version: '', meta: null, items: [], list: [], chores: [], recipes: [], dict: [], members: [], freezeHints: [], households: [] },
+    hid: '',          // v11.0: current household ('' = a server without households)
     tabs: [],
     current: null,
     idToken: null,
@@ -75,7 +80,10 @@
   K.catTh = function (id) { const c = (K.S.meta ? K.S.meta.cats : []).filter(function (x) { return x.id === id; })[0]; return c ? c.th : id; };
   K.dictEntry = function (name) { return K.S.dict.filter(function (d) { return d.name === name; })[0] || null; };
 
-  K.canEdit = function () { return !!(K.S.me && K.S.me.role === 'editor'); };
+  K.canEdit = function () { return !!(K.S.me && (K.S.me.role === 'editor' || K.S.me.role === 'admin')); };
+  K.isAdmin = function () { return !!(K.S.me && K.S.me.role === 'admin'); };
+  /** Is a storage zone used in this household? (meta.locs[].on, v11.0; older servers: everything on) */
+  K.zoneOn = function (id) { const l = (K.S.meta ? K.S.meta.locs : []).filter(function (x) { return x.id === id; })[0]; return !!l && l.on !== false; };
 
   /* ---------------- local storage (never required: private mode / blocked storage still works) ---------------- */
   K.store = {
@@ -83,6 +91,34 @@
     set: function (key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } },
     del: function (key) { try { localStorage.removeItem(key); } catch (e) { /* ignore */ } },
   };
+
+  /* ---------------- households (v11.0) ---------------- */
+  const HH_KEYS = ['shop.v1', 'cook.v1', 'freezeDismissed'];   // phone storage that belongs to one household
+  const hhHooks = [];
+  /** Storage key for this household's data ('kawo.<hid>.<base>'; no household = the pre-v11 key). */
+  K.hkey = function (base, hid) { hid = hid === undefined ? K.hid : hid; return hid ? 'kawo.' + hid + '.' + base : 'kawo.' + base; };
+  /** fn() runs whenever the household changes, so a view can load that household's phone storage. */
+  K.onHousehold = function (fn) { hhHooks.push(fn); };
+  K.setHousehold = function (hid) {
+    hid = hid || '';
+    if (hid === K.hid) return;
+    K.hid = hid;
+    if (hid) K.store.set('kawo.hh', hid);
+    hhHooks.forEach(function (fn) { fn(); });
+  };
+  /** Pre-v11 phones kept the shopping ticks etc. without a household: they belong to the first household. */
+  function moveOldStorage() {
+    const first = (K.S.households || []).filter(function (h) { return h.first; })[0];
+    if (!first) return;
+    let moved = false;
+    HH_KEYS.forEach(function (base) {
+      const old = K.store.get('kawo.' + base, null);
+      if (old === null) return;
+      if (K.store.get(K.hkey(base, first.id), null) === null) { K.store.set(K.hkey(base, first.id), old); moved = true; }
+      K.store.del('kawo.' + base);
+    });
+    if (moved && first.id === K.hid) hhHooks.forEach(function (fn) { fn(); });
+  }
 
   K.newReqId = function () {
     const a = new Uint8Array(12);
@@ -92,14 +128,15 @@
 
   /* ---------------- server ---------------- */
   /** Raw call. Never throws: network trouble comes back as {ok:false, error:'network'}. */
-  K.call = async function (api, args, reqId) {
+  K.call = async function (api, args, reqId, hh) {
     let res;
+    hh = hh === undefined ? K.hid : hh;   // a waiting batch keeps the household it was made in
     try {
       // text/plain = "simple request": no CORS preflight, which Apps Script can't answer.
       res = await fetch(CFG.API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ api: api, idToken: K.idToken, args: args || {}, reqId: reqId }),
+        body: JSON.stringify({ api: api, idToken: K.idToken, hh: hh || undefined, args: args || {}, reqId: reqId }),
       });
     } catch (e) {
       return { ok: false, error: 'network' };
@@ -114,7 +151,10 @@
   K.absorb = function (res) {
     if (res.me) K.S.me = res.me;
     if (res.version) K.S.version = res.version;
+    if (res.households) K.S.households = res.households;
+    if (res.hh) K.setHousehold(res.hh);
     if (res.state) Object.keys(res.state).forEach(function (k) { K.S[k] = res.state[k]; });
+    if (res.households) moveOldStorage();
   };
 
   /**
@@ -126,8 +166,10 @@
     if (!K.canEdit()) { K.toast(ERRORS.forbidden, true); return { ok: false, error: 'forbidden' }; }
     if (K.busy && !opts.force) return { ok: false, error: 'busy' };
     K.busy = true; K.renderBusy();
-    const res = await K.call(api, args, opts.reqId || K.newReqId());
+    const hh = opts.hh === undefined ? K.hid : opts.hh;
+    const res = await K.call(api, args, opts.reqId || K.newReqId(), hh);
     K.busy = false; K.renderBusy();
+    if (res.ok && hh !== K.hid) return res;   // answered for a household we've switched away from: don't show its data
     if (res.ok) {
       K.absorb(res);
       if (!opts.quiet && res.data && res.data.text) K.toast(res.data.text);
@@ -141,10 +183,42 @@
 
   K.reload = async function () {
     const res = await K.call('home', {});
-    if (!res.ok) { K.fatal(K.errorText(res)); return false; }
+    if (!res.ok) {
+      // v11.0: not in this household, but in others: let them pick
+      if (res.error === 'no_household' && res.households && res.households.length) { K.S.households = res.households; K.pickHouseholdPage(); return false; }
+      K.fatal(K.errorText(res)); return false;
+    }
     K.absorb(res);
     K.render();
     return true;
+  };
+
+  /** Switch to another household this person belongs to: fresh data, that household's phone storage. */
+  K.switchHousehold = async function (hid) {
+    if (!hid || hid === K.hid) return;
+    const keep = K.S.households;
+    K.S = { me: null, version: '', meta: null, items: [], list: [], chores: [], recipes: [], dict: [], members: [], freezeHints: [], households: keep };
+    K.setHousehold(hid);
+    K.$('nav').hidden = true;
+    K.$('view').replaceChildren(el('p', { class: 'status', text: 'กำลังโหลด…' }));
+    const ok = await K.reload();
+    window.scrollTo(0, 0);
+    if (ok) K.tabs.forEach(function (t) { if (t.afterLoad) t.afterLoad(); });
+  };
+
+  function householdRows(close) {
+    return (K.S.households || []).map(function (h) {
+      return el('button', { class: 'row', type: 'button', 'aria-current': h.id === K.hid ? 'true' : null, on: { click: function () { if (close) close(); K.switchHousehold(h.id); } } }, [
+        el('div', { class: 'main' }, ['🏠 ' + h.name, el('span', { class: 'sub', text: ({ admin: 'ผู้ดูแลบ้าน', editor: 'แก้ไขได้', viewer: 'ดูอย่างเดียว' })[h.role] || '' })]),
+        el('span', { class: 'end', text: h.id === K.hid ? '✓' : '' }),
+      ]);
+    });
+  }
+  K.pickHousehold = function () {
+    K.sheet(function (close) { return [el('h3', { text: 'เลือกบ้าน' }), el('div', { class: 'list' }, householdRows(close))]; });
+  };
+  K.pickHouseholdPage = function () {
+    K.$('view').replaceChildren(el('div', {}, [el('p', { class: 'status', text: ERRORS.no_household }), K.group('บ้านของคุณ', householdRows(null))]));
   };
 
   /* ---------------- UI pieces ---------------- */
@@ -232,17 +306,32 @@
   };
 
   /* ---------------- tabs + rendering ---------------- */
-  const TAB_ORDER = ['fridge', 'shop', 'stock', 'chores', 'cook', 'settings'];
+  /*
+   * v12.0 layout: exactly 4 tabs in the bottom bar (fridge = landing, shop, chores, history). Every other page is a
+   * tab with nav: false: เช็กของ and ทำอะไรกินดี open from ตู้เย็น (parent: 'fridge', with a ← back bar), all
+   * settings open from ⚙️ in the top corner. A future page goes inside one of the 4 tabs or under ⚙️.
+   */
+  const TAB_ORDER = ['fridge', 'shop', 'chores', 'history', 'stock', 'cook', 'settings'];
+  const LANDING = 'fridge';
+  let lastMain = LANDING;   // where ← goes back to from ⚙️
   K.tab = function (t) {
     K.tabs.push(t);
     K.tabs.sort(function (a, b) { return TAB_ORDER.indexOf(a.id) - TAB_ORDER.indexOf(b.id); });
   };
 
   K.go = function (id) {
+    const from = K.tabs.filter(function (t) { return t.id === K.current; })[0];
+    if (from && from.nav !== false) lastMain = from.id;
     K.current = id;
     K.store.set('kawo.tab', id);
+    const t = K.tabs.filter(function (x) { return x.id === id; })[0];
+    if (t && t.onEnter) t.onEnter();
     K.render();
     window.scrollTo(0, 0);
+  };
+  K.back = function () {
+    const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
+    K.go((t && t.parent) || lastMain || LANDING);
   };
 
   K.renderBusy = function () { document.body.style.cursor = K.busy ? 'progress' : ''; };
@@ -252,22 +341,33 @@
     const who = K.$('who');
     who.replaceChildren(el('b', { text: K.S.me.name }), el('span', { class: 'role ' + K.S.me.role, text: K.S.me.roleTh }));
     who.hidden = false;
+    // v11.0: the household's name, and a switcher when the person is in more than one
+    const house = K.S.meta && K.S.meta.houseName;
+    const who2 = (K.S.meta && K.S.meta.persona && K.S.meta.persona.name) || 'กะวอ';   // v13.0: the household's persona
+    const many = (K.S.households || []).length > 1;
+    const brand = document.querySelector('.brand');
+    brand.replaceChildren(many
+      ? el('button', { class: 'house', type: 'button', 'aria-label': 'เปลี่ยนบ้าน', on: { click: K.pickHousehold } }, ['🏠 ' + (house || who2) + ' ▾'])
+      : document.createTextNode('🏠 ' + (house || who2)));
+    document.title = house ? who2 + ' · ' + house : who2;
 
     const banners = K.$('banners');
     const b = [];
     if (K.S.version && K.S.version !== APP_VERSION) {
       b.push(el('div', { class: 'banner bad', text: 'หน้าเว็บ v' + APP_VERSION + ' ไม่ตรงกับระบบ v' + K.S.version + ' ลองปิดแล้วเปิดใหม่ (ถ้ายังไม่หาย บอกเด๊ะ)' }));
     }
-    if (CFG.ENV === 'dev') b.push(el('div', { class: 'banner bad', text: '🧪 DEV: หน้าทดสอบ ใช้ข้อมูลชีตทดสอบ ไม่ใช่ของจริง' }));
-    if (!K.canEdit()) b.push(el('div', { class: 'banner info', text: '👀 บัญชีนี้ดูได้อย่างเดียว ปุ่มแก้ไขจะกดไม่ได้' }));
+    // v13.0: no red DEV banner any more (our family's real household lives on dev); the footer still says DEV.
+    if (!K.canEdit()) b.push(el('div', { class: 'banner info', text: '👀 บัญชีนี้ดูได้อย่างเดียว' + (house ? 'ใน' + house : '') + ' ปุ่มแก้ไขจะกดไม่ได้' }));
     K.tabs.forEach(function (t) { if (t.banner) { const n = t.banner(); if (n) b.push(n); } });
     banners.replaceChildren.apply(banners, b);
 
     const nav = K.$('nav');
-    if (!K.tabs.some(function (t) { return t.id === K.current; })) K.current = K.tabs[0].id;
-    nav.replaceChildren.apply(nav, K.tabs.map(function (t) {
+    if (!K.tabs.some(function (t) { return t.id === K.current; })) K.current = LANDING;
+    const tab = K.tabs.filter(function (t) { return t.id === K.current; })[0];
+    const here = tab.nav === false ? (tab.parent || '') : tab.id;   // a page inside a tab lights up that tab
+    nav.replaceChildren.apply(nav, K.tabs.filter(function (t) { return t.nav !== false; }).map(function (t) {
       const badge = t.badge ? t.badge() : 0;
-      return el('button', { type: 'button', 'aria-current': t.id === K.current ? 'page' : null, on: { click: function () { K.go(t.id); } } }, [
+      return el('button', { type: 'button', 'aria-current': t.id === here ? 'page' : null, on: { click: function () { K.go(t.id); } } }, [
         el('span', { class: 'ic', text: t.icon }),
         el('span', { text: t.label }),
         badge ? el('span', { class: 'dot', text: String(badge) }) : null,
@@ -275,8 +375,20 @@
     }));
     nav.hidden = false;
 
-    const tab = K.tabs.filter(function (t) { return t.id === K.current; })[0];
-    K.$('view').replaceChildren(tab.render());
+    const gear = K.$('gear');
+    gear.hidden = false;
+    gear.setAttribute('aria-pressed', String(K.current === 'settings'));
+    const page = tab.render();
+    if (tab.nav === false) {
+      // ← back bar for pages that aren't one of the 4 tabs
+      const parent = K.tabs.filter(function (t) { return t.id === tab.parent; })[0];
+      K.$('view').replaceChildren(el('div', { class: 'backbar' }, [
+        el('button', { class: 'btn small', type: 'button', text: '← ' + (parent ? parent.label : 'กลับ'), on: { click: K.back } }),
+        el('b', { text: tab.icon + ' ' + tab.label }),
+      ]), page);
+    } else {
+      K.$('view').replaceChildren(page);
+    }
     K.$('foot').textContent = (CFG.ENV === 'dev' ? 'DEV · ' : '') + 'ข้อมูลวันที่ ' + K.thDate(K.S.meta.today) + ' · หน้าเว็บ v' + APP_VERSION + ' · ระบบ v' + K.S.version;
   };
 
@@ -286,7 +398,8 @@
 
   /* ---------------- start ---------------- */
   K.start = async function () {
-    K.current = K.store.get('kawo.tab', null);
+    K.current = LANDING;   // v12.0: always open on ตู้เย็น
+    K.$('gear').addEventListener('click', function () { if (K.current === 'settings') K.back(); else K.go('settings'); });
     // Local testing only (http://localhost): talk to the test server without LINE. The real server
     // rejects these fake tokens, so this does nothing on the published page.
     const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
@@ -305,7 +418,13 @@
       K.idToken = liff.getIDToken();
       if (!K.idToken) return K.fatal(ERRORS.auth + ' (ไม่มี ID token: เปิด scope openid ใน LIFF)');
     }
-    const ok = await K.reload();
+    // v11.0: which household? The app link carries ?h=<id> (read after liff.init, which restores the query);
+    // otherwise the household last used on this phone, otherwise the server picks the person's own.
+    const h = new URLSearchParams(location.search).get('h');
+    const fromLink = /^[a-z0-9]{4,40}$/.test(h || '');
+    K.setHousehold(fromLink ? h : K.store.get('kawo.hh', ''));
+    let ok = await K.reload();
+    if (!ok && !fromLink && K.hid && !(K.S.households || []).length) { K.setHousehold(''); ok = await K.reload(); }   // a stale saved household
     if (ok) K.tabs.forEach(function (t) { if (t.afterLoad) t.afterLoad(); });
   };
 })();

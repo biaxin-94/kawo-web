@@ -6,12 +6,15 @@
   <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex">
   <title>กะวอ</title>
-  <link rel="stylesheet" href="style.css?v=10.0">
+  <link rel="stylesheet" href="style.css?v=13.1">
 </head>
 <body>
   <header class="top">
     <div class="brand">🏠 กะวอ</div>
-    <div id="who" class="who" hidden></div>
+    <div class="topright">
+      <div id="who" class="who" hidden></div>
+      <button id="gear" class="gear" type="button" aria-label="ตั้งค่า" hidden>⚙️</button>
+    </div>
   </header>
   <div id="banners"></div>
 
@@ -24,12 +27,13 @@
 
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <!-- ?v= makes phones fetch the new files after a deploy instead of a cached old copy -->
-  <script src="config.js?v=10.0"></script>
-  <script src="core.js?v=10.0"></script>
-  <script src="views-fridge.js?v=10.0"></script>
-  <script src="views-shop.js?v=10.0"></script>
-  <script src="views-home.js?v=10.0"></script>
-  <script src="views-settings.js?v=10.0"></script>
+  <script src="config.js?v=13.1"></script>
+  <script src="core.js?v=13.1"></script>
+  <script src="views-fridge.js?v=13.1"></script>
+  <script src="views-shop.js?v=13.1"></script>
+  <script src="views-home.js?v=13.1"></script>
+  <script src="views-settings.js?v=13.1"></script>
+  <script src="views-history.js?v=13.1"></script>
   <script>KAWO.start();</script>
 </body>
 </html>

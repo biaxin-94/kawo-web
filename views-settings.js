@@ -1,11 +1,17 @@
 /*
  * ตั้งค่า: สมาชิก (roles), ของ (Dictionary), งานบ้าน (chores), เมนู (recipes).
+ * v11.0: ⚙️ ตั้งค่าบ้าน (admins only): name, chore rotation, storage zones, default zone per category;
+ * members get a call name (how กะวอ calls them), a note, and a role per household.
  * Viewers see everything with the controls disabled; the server refuses their writes anyway.
  */
 (function () {
   'use strict';
   const K = window.KAWO, el = K.el;
   let sub = 'members';
+  const multi = function () { return !!K.hid; };
+  // v13.0: the household's persona name in the texts that mention her
+  const her = function () { return (K.S.meta && K.S.meta.persona && K.S.meta.persona.name) || 'กะวอ'; };   // v11.0 household (else: a server without households)
+  const ROLE_OPTS = [{ v: 'admin', t: 'ผู้ดูแลบ้าน' }, { v: 'editor', t: 'แก้ไขได้' }, { v: 'viewer', t: 'ดูอย่างเดียว' }];
   let dictQuery = '';
 
   const field = function (label, input) { return el('label', { class: 'field' }, [el('span', { text: label }), input]); };
@@ -15,7 +21,44 @@
   const numInput = function (v, placeholder) { return el('input', { type: 'number', inputmode: 'numeric', min: '0', value: v === null || v === undefined ? '' : String(v), placeholder: placeholder || '' }); };
 
   /* ---------------- สมาชิก ---------------- */
+  function memberForm(m) {
+    K.sheet(function (close) {
+      const name = el('input', { value: m.name, maxlength: '30' });
+      const call = el('input', { value: m.callName || '', maxlength: '30', placeholder: 'เช่น อาเด๊ะ พี่หมี (ว่าง = ชื่อไลน์)' });
+      const note = el('input', { value: m.note || '', maxlength: '80', placeholder: 'เช่น พูดสุภาพ ลงท้าย ค่ะ' });
+      const role = select(ROLE_OPTS, m.role);
+      const save = function () {
+        close();
+        K.write('memberSave', { key: m.key, name: name.value.trim(), callName: call.value.trim(), note: note.value.trim(), role: role.value });
+      };
+      return [
+        el('h3', { text: m.name + (m.me ? ' (ฉัน)' : '') }),
+        field('ชื่อในบ้านนี้', name),
+        field(her() + 'เรียกว่า', call),
+        field('วิธีพูดด้วย (ไม่ใส่ก็ได้)', note),
+        field('สิทธิ์', role),
+        el('p', { class: 'hint', text: 'ผู้ดูแลบ้าน = แก้ไขได้ + ตั้งค่าบ้าน + เปลี่ยนสิทธิ์ · ต้องมีผู้ดูแลอย่างน้อย 1 คน' }),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'บันทึก', on: { click: save } }),
+        ]),
+      ];
+    });
+  }
+
+  function renderMembersMulti(wrap) {
+    const admin = K.isAdmin();
+    const roleTh = {}; ROLE_OPTS.forEach(function (o) { roleTh[o.v] = o.t; });
+    wrap.appendChild(el('p', { class: 'hint', text: 'คนในกลุ่มไลน์ของบ้านนี้ที่เคยพิมพ์หรือเปิดแอปจะมาอยู่ที่นี่' + (admin ? ' · แตะเพื่อแก้ชื่อ ชื่อที่' + her() + 'เรียก และสิทธิ์' : '') }));
+    wrap.appendChild(K.group('สมาชิก (' + K.S.members.length + ')', K.S.members.map(function (m) {
+      const sub = [roleTh[m.role] || m.role, m.callName ? her() + 'เรียก "' + m.callName + '"' : null, m.note || null].filter(Boolean).join(' · ');
+      const kids = [el('div', { class: 'main' }, [m.name + (m.me ? ' (ฉัน)' : ''), el('span', { class: 'sub', text: sub })]), admin ? el('span', { class: 'end', text: '✏️' }) : null];
+      return admin ? el('button', { class: 'row', type: 'button', on: { click: function () { memberForm(m); } } }, kids) : el('div', { class: 'row' }, kids);
+    })));
+  }
+
   function renderMembers(wrap) {
+    if (multi()) return renderMembersMulti(wrap);
     const can = K.canEdit();
     wrap.appendChild(el('p', { class: 'hint', text: 'คนที่เคยพิมพ์ในกลุ่มหรือเปิดแอปจะมาอยู่ที่นี่ · แก้ไขได้ = บอทตอบ + กดปุ่มแก้ไขได้ · ดูอย่างเดียว = ดูได้ทุกหน้า บอทไม่ตอบ' }));
     wrap.appendChild(K.group('สมาชิก (' + K.S.members.length + ')', K.S.members.map(function (m) {
@@ -42,29 +85,33 @@
       const name = el('input', { value: d.name, maxlength: '40', placeholder: 'เช่น ไก่', readonly: isNew ? null : true });
       const aliases = el('input', { value: d.aliases, placeholder: 'คั่นด้วย , เช่น chicken, อกไก่' });
       const cat = select(meta.cats.map(function (c) { return { v: c.id, t: c.icon + ' ' + c.th }; }), d.cat);
-      const loc = select(meta.locs.map(function (l) { return { v: l.id, t: l.icon + ' ' + l.th }; }), d.loc);
+      // v11.0: only zones this household uses (plus the item's current one); '' = the category's default
+      const loc = select([{ v: '', t: 'ตามประเภท' }].concat(meta.locs.filter(function (l) { return l.on !== false || l.id === d.loc; })
+        .map(function (l) { return { v: l.id, t: l.icon + ' ' + l.th }; })), d.loc);
       const type = select(meta.types.map(function (t) { return { v: t.id, t: t.th }; }), d.type);
       const unit = el('input', { value: d.unit, maxlength: '12', placeholder: 'เช่น ฟอง กล่อง หัว' });
       const defQty = numInput(d.defQty, '1');
       const fridge = numInput(d.fridge, 'ตามประเภท'), chill = numInput(d.chill, '-'), freezer = numInput(d.freezer, 'ไม่แช่');
+      const pantry = numInput(d.pantry, 'เท่าตู้เย็น');
       const unitField = field('หน่วย (ชิ้น)', unit), defField = field('จำนวนปกติ (ไม่ใส่ตัวเลข = เท่านี้)', defQty);
       const sync = function () { unitField.hidden = type.value !== 'piece'; defField.hidden = type.value === 'flag'; };
       type.addEventListener('change', sync); sync();
       const save = function () {
         close();
         K.write('dictSave', { row: isNew ? null : d.row, name: name.value.trim(), aliases: aliases.value, cat: cat.value, loc: loc.value, type: type.value,
-          unit: unit.value, defQty: defQty.value, fridge: fridge.value, chill: chill.value, freezer: freezer.value });
+          unit: unit.value, defQty: defQty.value, fridge: fridge.value, chill: chill.value, freezer: freezer.value, pantry: pantry.value });
       };
       return [
         el('h3', { text: isNew ? 'เพิ่มของใหม่' : d.name }),
         el('div', { class: 'sub', text: isNew ? 'ชื่อเปลี่ยนทีหลังไม่ได้' : 'แก้แล้วใช้กับของที่เพิ่มใหม่ ของในตู้ตอนนี้ไม่เปลี่ยน' }),
-        d.review ? el('div', { class: 'banner warn', text: '🆕 กะวอเพิ่มอันนี้ให้จากเมนู โดยลอกค่าจากของที่คล้ายกัน ตรวจแล้วกดบันทึก ป้ายต้องตรวจจะหายไป' }) : null,
+        d.review ? el('div', { class: 'banner warn', text: '🆕 ' + her() + 'เพิ่มอันนี้ให้จากเมนู โดยลอกค่าจากของที่คล้ายกัน ตรวจแล้วกดบันทึก ป้ายต้องตรวจจะหายไป' }) : null,
         isNew ? field('ชื่อ', name) : null,
         field('ชื่ออื่นที่พิมพ์ได้', aliases),
         el('div', { class: 'field row2' }, [field('ประเภท', cat), field('เก็บที่', loc)]),
         field('ชนิด: ชิ้น = นับ · ที่ = จำนวนที่ (เนื้อสัตว์) · มี/หมด = ไม่นับ', type),
         el('div', { class: 'field row2' }, [unitField, defField]),
-        el('div', { class: 'field row2' }, [field('วันในตู้เย็น', fridge), field('วันใน Chill', chill), field('วันในช่องฟรีซ', freezer)]),
+        el('div', { class: 'field row2' }, [field('วันในตู้เย็น', fridge), K.zoneOn('Chill') ? field('วันใน Chill', chill) : null,
+          K.zoneOn('Freezer') ? field('วันในช่องฟรีซ', freezer) : null, K.zoneOn('Pantry') ? field('วันนอกตู้', pantry) : null]),
         el('div', { class: 'btns' }, [
           el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
           el('button', { class: 'btn primary', type: 'button', disabled: !can, text: 'บันทึก', on: { click: save } }),
@@ -86,9 +133,9 @@
       const typeTh = {}; K.S.meta.types.forEach(function (t) { typeTh[t.id] = t.th; });
       const reviewN = K.S.dict.filter(function (d) { return d.review; }).length;
       box.replaceChildren(
-        reviewN ? el('div', { class: 'banner warn', text: '🆕 กะวอเพิ่มของใหม่จากเมนู ' + reviewN + ' อย่าง แตะเพื่อตรวจวันหมดอายุ หน่วย และที่เก็บ แล้วกดบันทึก' }) : el('span'),
+        reviewN ? el('div', { class: 'banner warn', text: '🆕 ' + her() + 'เพิ่มของใหม่จากเมนู ' + reviewN + ' อย่าง แตะเพื่อตรวจวันหมดอายุ หน่วย และที่เก็บ แล้วกดบันทึก' }) : el('span'),
         K.group('ของ (' + list.length + ')', list.slice(0, 150).map(function (d) {
-          const bits = [K.catTh(d.cat), K.locTh(d.loc), typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
+          const bits = [K.catTh(d.cat), d.loc ? K.locTh(d.loc) : 'ตามประเภท', typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
           return el('button', { class: 'row' + (d.review ? ' soon' : ''), type: 'button', on: { click: function () { dictForm(d); } } }, [
             el('div', { class: 'main' }, [d.name, d.review ? el('span', { class: 'tag', text: ' 🆕 ต้องตรวจ' }) : null, el('span', { class: 'sub', text: bits.join(' · ') })]),
             el('span', { class: 'end', text: '✏️' }),
@@ -110,7 +157,10 @@
       const can = K.canEdit();
       const task = el('input', { value: c.task, maxlength: '60', placeholder: 'เช่น ล้างแอร์' });
       const every = el('input', { type: 'number', inputmode: 'numeric', min: '1', max: '365', value: String(c.every) });
-      const owner = select([{ v: 'Alternate', t: 'สลับกัน' }].concat(K.S.meta.household.map(function (h) { return { v: h, t: h }; })), c.ownerRule);
+      // v11.0: any member can be given a chore; "สลับกัน" goes round the rotation set in ตั้งค่าบ้าน
+      const people = multi() ? K.S.members.map(function (m) { return m.name; }) : K.S.meta.household;
+      const owner = select([{ v: 'Alternate', t: 'สลับกัน' + (multi() && K.S.meta.household.length ? ' (' + K.S.meta.household.join(' → ') + ')' : '') }]
+        .concat(people.map(function (h) { return { v: h, t: h }; })), c.ownerRule);
       const send = function (active) {
         close();
         K.write('choreSave', { row: isNew ? null : c.row, orig: isNew ? null : c.task, task: task.value.trim(), every: Number(every.value), ownerRule: owner.value, active: active });
@@ -224,8 +274,67 @@
     }) : [el('div', { class: 'empty', text: 'ยังไม่มีเมนู' })]));
   }
 
+  /* ---------------- ⚙️ ตั้งค่าบ้าน (v11.0, admins only) ---------------- */
+  function renderHouse(wrap) {
+    const meta = K.S.meta;
+    // name
+    const name = el('input', { value: meta.houseName || '', maxlength: '40', 'aria-label': 'ชื่อบ้าน' });
+    wrap.appendChild(K.group('ชื่อบ้าน', [el('div', { class: 'row' }, [el('div', { class: 'main' }, [name]),
+      el('button', { class: 'btn small primary', type: 'button', text: 'บันทึก', on: { click: function () { K.write('hhSave', { name: name.value.trim() }); } } })])]));
+
+    // chore rotation: tick who takes turns, in member order
+    const rot = meta.household || [];
+    const boxes = K.S.members.map(function (m) {
+      const cb = el('input', { type: 'checkbox', checked: rot.indexOf(m.name) >= 0 ? true : null, 'aria-label': m.name });
+      return { name: m.name, cb: cb, node: el('label', { class: 'toggle' }, [el('span', { text: m.name }), cb]) };
+    });
+    const ordered = rot.filter(function (n) { return boxes.some(function (b) { return b.name === n; }); });
+    wrap.appendChild(K.group('ใครผลัดกันทำงานบ้าน ("สลับกัน")', boxes.map(function (b) { return b.node; }).concat([
+      el('p', { class: 'hint', text: ordered.length ? 'ตอนนี้: ' + ordered.join(' → ') : 'ยังไม่ได้ตั้ง งานบ้านแบบสลับกันจะเปิดใช้ไม่ได้จนกว่าจะตั้ง' }),
+      el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'บันทึกคนผลัดกันทำ', on: { click: function () {
+        const picked = boxes.filter(function (b) { return b.cb.checked; }).map(function (b) { return b.name; });
+        const keep = ordered.filter(function (n) { return picked.indexOf(n) >= 0; });   // keep the current order, new people at the end
+        K.write('hhSave', { rotation: keep.concat(picked.filter(function (n) { return keep.indexOf(n) < 0; })) });
+      } } })]),
+      el('p', { class: 'hint', text: 'เปิด/ปิดงานแต่ละอย่างได้ที่ ตั้งค่า › งานบ้าน' }),
+    ])));
+
+    // zones
+    const zones = {};
+    const zoneRows = ['Chill', 'Freezer', 'Pantry'].map(function (id) {
+      const l = meta.locs.filter(function (x) { return x.id === id; })[0];
+      const cb = el('input', { type: 'checkbox', checked: l && l.on !== false ? true : null, 'aria-label': l ? l.th : id });
+      zones[id] = cb;
+      return el('label', { class: 'toggle' }, [el('span', { text: (l ? l.icon + ' ' + l.th : id) }), cb]);
+    });
+    wrap.appendChild(K.group('ช่องเก็บของที่บ้านนี้มี', zoneRows.concat([
+      el('p', { class: 'hint', text: 'ตู้เย็นและตู้เก็บของมีเสมอ · ปิดช่องไหน ของใหม่จะไปตู้เย็นแทน (ของที่อยู่แล้วไม่ย้าย)' }),
+      el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'บันทึกช่องเก็บของ', on: { click: function () {
+        K.write('hhSave', { zones: { Chill: zones.Chill.checked, Freezer: zones.Freezer.checked, Pantry: zones.Pantry.checked } });
+      } } })]),
+    ])));
+
+    // default zone per category (fresh food only: dry food and household items live in ตู้เก็บของ)
+    const sel = {};
+    const catRows = meta.cats.filter(function (c) { return !c.storage; }).map(function (c) {
+      const s = select([{ v: '', t: 'ตู้เย็น (ปกติ)' }].concat(meta.locs.filter(function (l) { return l.on !== false && l.id !== 'Fridge' && l.id !== 'Storage'; })
+        .map(function (l) { return { v: l.id, t: l.icon + ' ' + l.th }; })), (meta.catZones || {})[c.id] || '');
+      s.setAttribute('aria-label', c.th);
+      sel[c.id] = s;
+      return el('div', { class: 'row' }, [el('div', { class: 'main', text: (c.icon || '') + ' ' + c.th }), s]);
+    });
+    wrap.appendChild(K.group('ของแต่ละประเภทเก็บที่ไหน', catRows.concat([
+      el('p', { class: 'hint', text: 'ใช้กับของที่ไม่ได้ตั้งที่เก็บเอง (ตั้งค่า › ของ › เก็บที่ "ตามประเภท") เช่น เนื้อสัตว์ → Chill' }),
+      el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'บันทึกที่เก็บ', on: { click: function () {
+        const out = {}; Object.keys(sel).forEach(function (c) { out[c] = sel[c].value; });
+        K.write('hhSave', { catZones: out });
+      } } })]),
+    ])));
+  }
+
   /* ---------------- tab ---------------- */
   const SUBS = [
+    { id: 'house', label: '⚙️ ตั้งค่าบ้าน', render: renderHouse, show: function () { return multi() && K.isAdmin(); } },
     { id: 'members', label: '👥 สมาชิก', render: renderMembers },
     { id: 'dict', label: '🥬 ของ', render: renderDict },
     { id: 'chores', label: '🧹 งานบ้าน', render: renderChoreSettings },
@@ -234,12 +343,14 @@
 
   function render() {
     const wrap = el('div');
-    wrap.appendChild(el('div', { class: 'seg', role: 'group' }, SUBS.map(function (s) {
+    const subs = SUBS.filter(function (s) { return !s.show || s.show(); });
+    if (!subs.some(function (s) { return s.id === sub; })) sub = subs[0].id;
+    wrap.appendChild(el('div', { class: 'seg', role: 'group' }, subs.map(function (s) {
       return el('button', { type: 'button', 'aria-pressed': String(s.id === sub), text: s.label, on: { click: function () { sub = s.id; K.render(); } } });
     })));
-    SUBS.filter(function (s) { return s.id === sub; })[0].render(wrap);
+    subs.filter(function (s) { return s.id === sub; })[0].render(wrap);
     return wrap;
   }
 
-  K.tab({ id: 'settings', icon: '⚙️', label: 'ตั้งค่า', render: render });
+  K.tab({ id: 'settings', icon: '⚙️', label: 'ตั้งค่า', render: render, nav: false });   // opened from ⚙️ (top corner)
 })();

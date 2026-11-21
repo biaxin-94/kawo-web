@@ -34,7 +34,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .who { font-size: 13px; color: var(--muted); text-align: right; }
 .who b { color: var(--text); }
 .role { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--chip); font-size: 12px; }
-.role.editor { color: var(--accent); }
+.role.editor, .role.admin { color: var(--accent); }
+.role.admin { font-weight: 700; }
+.brand .house { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.row[aria-current="true"] { background: var(--chip); }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.toggle input { width: 22px; height: 22px; }
 .banner { margin: 8px 16px 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
 .banner.warn { background: var(--warn-bg); color: var(--warn-text); }
 .banner.bad { background: var(--bad-bg); color: var(--bad-text); }
@@ -145,3 +150,16 @@ button.row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; bac
 
 /* ---------- Dictionary "ต้องตรวจ" flag (v10.0) ---------- */
 .row .tag { color: var(--warn-text); font-size: 12px; font-weight: 600; }
+
+/* v12.0: ⚙️ in the top corner, ← back bar for pages inside a tab, ประวัติ */
+.topright { display: flex; align-items: center; gap: 8px; }
+.gear { font-size: 20px; line-height: 1; background: none; border: 0; padding: 6px; border-radius: 10px; cursor: pointer; }
+.gear[aria-pressed="true"] { background: var(--chip); }
+.backbar { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.tools .btn { flex: 1 1 30%; min-width: 0; }
+.filters { display: flex; gap: 6px; margin: 8px 0; }
+.filters select { flex: 1; min-width: 0; }
+.day { margin: 14px 0 4px; font-weight: 700; color: var(--muted); font-size: 14px; }
+.hist .row { align-items: flex-start; }
+.hist .time { color: var(--muted); font-size: 12px; min-width: 40px; }

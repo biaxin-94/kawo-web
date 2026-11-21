@@ -131,7 +131,7 @@
 
   /** "ทำเมนูนี้": main ingredients we have, ticked at 1; optional ones we have, listed but not ticked. */
   K.cookRecipe = function (r) {
-    const preset = { sel: {}, menu: r.menu, main: [], opt: [] };
+    const preset = { sel: {}, menu: r.menu, recipe: r.id || '', main: [], opt: [] };   // v12.0: recipe ID -> recipe_cooked
     r.main.forEach(function (m) {
       const row = m.have ? bestRow(m.name) : null;
       if (row && preset.main.indexOf(row.id) < 0) { preset.main.push(row.id); preset.sel[row.id] = row.type === 'flag' ? row.qty : 1; }
@@ -242,6 +242,7 @@
             close();
             cook.pending = { reqId: K.newReqId(), hh: K.hid, payload: {
               uses: uses.map(function (u) { return { id: u.id, n: u.n, name: u.it.name }; }),
+              recipe: cook.recipe || undefined, menu: cook.menu || undefined,
               offered: out,
               addToList: out.filter(function (name) { return tick[name]; }),
             } };

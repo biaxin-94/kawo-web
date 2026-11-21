@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>กะวอ — ผู้ช่วยในกลุ่มไลน์บ้านเรา</title>
+
+  <!-- Google Fonts: Prompt (Headings) & Noto Sans Thai (Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Prompt:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind Custom Theme Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: {
+              outer: '#F3ECE2',
+              bg: '#FDF8F2',
+              card: '#FFFDF9',
+            },
+            sage: {
+              light: '#EBF3EC',
+              mid: '#C9DFCC',
+              DEFAULT: '#4A7C59',
+              dark: '#345C40',
+            },
+            terracotta: {
+              light: '#FFF0E5',
+              border: '#F5D2B8',
+              DEFAULT: '#E8834A',
+              dark: '#C96832',
+            },
+            ink: {
+              DEFAULT: '#2D342E',
+              muted: '#5F6960',
+              soft: '#889289',
+            },
+            line: {
+              bg: '#DCE6F2',
+              green: '#A4E869',
+              header: '#CBD9EA',
+            }
+          },
+          fontFamily: {
+            display: ['"Prompt"', '"Noto Sans Thai"', 'sans-serif'],
+            sans: ['"Noto Sans Thai"', '"Prompt"', 'sans-serif'],
+          },
+          boxShadow: {
+            soft: '0 6px 20px -4px rgba(45, 52, 46, 0.06)',
+            card: '0 4px 14px -2px rgba(45, 52, 46, 0.05)',
+            phone: '0 20px 50px -12px rgba(45, 52, 46, 0.14)',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-cream-outer text-ink font-sans antialiased overflow-x-hidden selection:bg-sage-light selection:text-sage-dark">
+
+  <!-- Mobile Portrait Frame Wrapper (Full-width on mobile, centered 420px card on desktop) -->
+  <main class="w-full sm:max-w-[420px] sm:mx-auto sm:my-6 bg-cream-bg sm:rounded-[32px] sm:shadow-phone sm:border sm:border-[#EAE1D4] overflow-hidden">
+
+    <!-- Continuous Vertical Infographic Container -->
+    <div class="px-4 py-5 space-y-5">
+
+      <!-- =========================================================
+           SECTION 1: HERO
+      ========================================================== -->
+      <header class="relative overflow-hidden rounded-[24px] bg-gradient-to-b from-sage-light via-[#F5F9F4] to-cream-card border border-sage-mid/60 px-5 pt-6 pb-6 text-center shadow-soft">
+
+        <!-- Decorative subtle background leaves -->
+        <svg class="pointer-events-none absolute -top-4 -left-4 w-24 h-24 text-sage/10" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
+          <path d="M18 82C18 42 48 16 86 14C84 52 58 82 18 82Z" />
+        </svg>
+        <svg class="pointer-events-none absolute -bottom-3 -right-3 w-20 h-20 text-terracotta/15 rotate-90" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
+          <path d="M18 82C18 42 48 16 86 14C84 52 58 82 18 82Z" />
+        </svg>
+
+        <!-- Pill Badge -->
+        <div class="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-white/95 border border-sage/20 px-3.5 py-1 text-xs font-display font-medium text-sage-dark shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-sage inline-block"></span>
+          <span>ผู้ช่วยในกลุ่มไลน์บ้านเรา</span>
+        </div>
+
+        <!-- Avatar of "กะวอ" (Self-Contained Watercolor-Style Inline SVG matching uploaded portrait) -->
+        <div class="relative z-10 mt-4 mb-2.5 flex justify-center">
+          <div class="relative w-36 h-36 rounded-full bg-[#FAF6F1] p-1 border-2 border-terracotta-border/80 ring-4 ring-white shadow-soft overflow-hidden">
+            <svg viewBox="0 0 240 240" class="w-full h-full rounded-full" role="img" aria-label="กะวอ ผู้ช่วยประจำบ้าน">
+              <defs>
+                <!-- Soft Watercolor Gradients -->
+                <radialGradient id="kawor-bg-wash" cx="50%" cy="45%" r="55%">
+                  <stop offset="0%" stop-color="#FDFBF7" />
+                  <stop offset="70%" stop-color="#F7F1E7" />
+                  <stop offset="100%" stop-color="#EFE6D8" />
+                </radialGradient>
+
+                <linearGradient id="hijab-main" x1="25%" y1="15%" x2="78%" y2="88%">
+                  <stop offset="0%" stop-color="#E5C8C5" />
+                  <stop offset="48%" stop-color="#D4AEAA" />
+                  <stop offset="100%" stop-color="#BA8E8A" />
+                </linearGradient>
+
+                <linearGradient id="hijab-fold-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#C89E9A" />
+                  <stop offset="100%" stop-color="#A67A76" />
+                </linearGradient>
+
+                <linearGradient id="hijab-highlight" x1="20%" y1="0%" x2="80%" y2="100%">
+                  <stop offset="0%" stop-color="#EED7D4" stop-opacity="0.85" />
+                  <stop offset="100%" stop-color="#D7B2AE" stop-opacity="0.2" />
+                </linearGradient>
+
+                <linearGradient id="skin-tone" x1="35%" y1="15%" x2="65%" y2="90%">
+                  <stop offset="0%" stop-color="#FDEEE2" />
+                  <stop offset="65%" stop-color="#F9DFCC" />
+                  <stop offset="100%" stop-color="#EFC8B1" />
+                </linearGradient>
+
+                <radialGradient id="blush-grad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#E99A88" stop-opacity="0.58" />
+                  <stop offset="65%" stop-color="#EDA898" stop-opacity="0.24" />
+                  <stop offset="100%" stop-color="#EDA898" stop-opacity="0" />
+                </radialGradient>
+
+                <linearGradient id="cream-top" x1="20%" y1="0%" x2="80%" y2="100%">
+                  <stop offset="0%" stop-color="#F5EFE0" />
+                  <stop offset="100%" stop-color="#E3D9C3" />
+                </linearGradient>
+
+                <linearGradient id="speech-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#E3EFFA" />
+                  <stop offset="100%" stop-color="#C5DCF0" />
+                </linearGradient>
+              </defs>
+
+              <!-- Warm Off-White Watercolor Backdrop -->
+              <circle cx="120" cy="120" r="120" fill="url(#kawor-bg-wash)" />
+              <ellipse cx="52" cy="182" rx="44" ry="26" fill="#EFE4D4" opacity="0.55" />
+              <ellipse cx="192" cy="64" rx="36" ry="24" fill="#EFE4D4" opacity="0.45" />
+
+              <!-- Outer Dusty-Rose Hijab Silhouette -->
+              <path
+                d="M120 34 C84 34 65 62 63 102 C61 130 63 145 55 157 C66 164 82 168 100 170 L152 170 C168 164 178 153 182 141 C176 131 177 116 176 98 C174 60 155 34 120 34 Z"
+                fill="url(#hijab-main)"
+                stroke="#6D534D"
+                stroke-width="2.1"
+                stroke-linejoin="round"
+              />
+
+              <!-- Soft Watercolor Shading on Hijab -->
+              <path
+                d="M120 36 C152 36 171 60 173 98 C174 114 173 128 178 139 C168 134 162 124 161 104 C159 68 144 45 120 45 Z"
+                fill="url(#hijab-fold-dark)"
+                opacity="0.32"
+              />
+              <path
+                d="M84 48 C96 39 112 37 126 39 C112 43 97 50 88 64 C80 77 77 95 77 112 C72 95 72 64 84 48 Z"
+                fill="url(#hijab-highlight)"
+              />
+
+              <!-- Inner Hijab Undercap Shadow -->
+              <path
+                d="M83 84 C85 59 101 47 120 47 C139 47 155 59 157 84 C147 64 135 56 120 56 C105 56 93 64 83 84 Z"
+                fill="#8B6964"
+                stroke="#6D534D"
+                stroke-width="1.6"
+              />
+
+              <!-- Cream / Pastel Sage-Cream Blouse Shoulders -->
+              <path
+                d="M52 214 C56 184 68 165 86 158 L156 158 C174 165 186 184 190 214 Z"
+                fill="url(#cream-top)"
+                stroke="#6D534D"
+                stroke-width="2.1"
+                stroke-linejoin="round"
+              />
+              <!-- Subtle Sleeve Creases -->
+              <path d="M74 178 C77 188 78 198 77 208" fill="none" stroke="#8C7B6B" stroke-width="1.5" stroke-linecap="round" opacity="0.65" />
+              <path d="M167 178 C164 188 163 198 164 208" fill="none" stroke="#8C7B6B" stroke-width="1.5" stroke-linecap="round" opacity="0.65" />
+
+              <!-- Vertical Hijab Scarf Tail Draping Down Right Chest -->
+              <path
+                d="M123 161 L154 155 C156 177 154 198 151 215 L117 215 C119 196 121 178 123 161 Z"
+                fill="url(#hijab-main)"
+                stroke="#6D534D"
+                stroke-width="2.1"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M137 161 C138 180 136 198 134 214"
+                fill="none"
+                stroke="#7D5E58"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                opacity="0.7"
+              />
+
+              <!-- Wrapped Neck & Chin Drape of Hijab -->
+              <path
+                d="M65 135 C78 152 103 163 132 161 C154 159 172 150 183 141 C174 162 146 174 114 173 C84 172 62 162 54 155 C59 149 63 142 65 135 Z"
+                fill="url(#hijab-main)"
+                stroke="#6D534D"
+                stroke-width="2.1"
+                stroke-linejoin="round"
+              />
+              <!-- Soft Drape Fold Lines -->
+              <path d="M72 146 C92 160 122 165 152 157" fill="none" stroke="#7D5E58" stroke-width="1.5" stroke-linecap="round" opacity="0.75" />
+              <path d="M64 157 C86 168 112 171 136 167" fill="none" stroke="#7D5E58" stroke-width="1.4" stroke-linecap="round" opacity="0.65" />
+
+              <!-- Face Oval -->
+              <path
+                d="M84 92 C84 67 99 54 120 54 C141 54 156 67 156 92 C156 122 140 144 120 144 C100 144 84 122 84 92 Z"
+                fill="url(#skin-tone)"
+                stroke="#6D534D"
+                stroke-width="2.1"
+              />
+              <!-- Subtle Chin & Jaw Watercolor Shadow -->
+              <path
+                d="M92 122 C100 136 110 142 120 142 C130 142 140 136 148 122 C139 132 130 136 120 136 C110 136 101 132 92 122 Z"
+                fill="#E3B198"
+                opacity="0.45"
+              />
+
+              <!-- Rosy Watercolor Cheeks -->
+              <ellipse cx="97" cy="112" rx="11" ry="7.5" fill="url(#blush-grad)" />
+              <ellipse cx="143" cy="112" rx="11" ry="7.5" fill="url(#blush-grad)" />
+              <!-- Delicate Cheek Hatch Marks (Left Cheek, matching illustration) -->
+              <g stroke="#C97D6D" stroke-width="1.1" stroke-linecap="round" opacity="0.75">
+                <line x1="91" y1="108" x2="89.5" y2="112.5" />
+                <line x1="94.5" y1="108" x2="93" y2="112.5" />
+                <line x1="98" y1="108" x2="96.5" y2="112.5" />
+                <line x1="101.5" y1="108" x2="100" y2="112.5" />
+              </g>
+
+              <!-- Gentle Eyebrows -->
+              <path d="M93 84.5 C98 81.5 105 81.8 110 84" fill="none" stroke="#685049" stroke-width="2.2" stroke-linecap="round" />
+              <path d="M130 84 C135 81.8 142 81.5 147 84.5" fill="none" stroke="#685049" stroke-width="2.2" stroke-linecap="round" />
+
+              <!-- Warm Expressive Brown Eyes -->
+              <!-- Left Eye -->
+              <ellipse cx="101.5" cy="96.5" rx="6.2" ry="6.5" fill="#4E3831" />
+              <circle cx="99.5" cy="94.3" r="2.1" fill="#FFFFFF" />
+              <circle cx="103.5" cy="98.2" r="0.9" fill="#FFFFFF" opacity="0.85" />
+              <path d="M93.5 94.5 C96.5 89.8 105.5 89.8 108.5 94.5" fill="none" stroke="#4E3831" stroke-width="2" stroke-linecap="round" />
+              <path d="M94.2 93.2 L91.8 91.5" fill="none" stroke="#4E3831" stroke-width="1.6" stroke-linecap="round" />
+
+              <!-- Right Eye -->
+              <ellipse cx="138.5" cy="96.5" rx="6.2" ry="6.5" fill="#4E3831" />
+              <circle cx="136.5" cy="94.3" r="2.1" fill="#FFFFFF" />
+              <circle cx="140.5" cy="98.2" r="0.9" fill="#FFFFFF" opacity="0.85" />
+              <path d="M131.5 94.5 C134.5 89.8 143.5 89.8 146.5 94.5" fill="none" stroke="#4E3831" stroke-width="2" stroke-linecap="round" />
+              <path d="M145.8 93.2 L148.2 91.5" fill="none" stroke="#4E3831" stroke-width="1.6" stroke-linecap="round" />
+
+              <!-- Soft Nose -->
+              <path d="M119.5 101 C118.2 105.5 117.5 108.5 119.5 110.2 C121 111.2 122.8 110.5 123.5 109.5" fill="none" stroke="#8C675A" stroke-width="1.6" stroke-linecap="round" />
+
+              <!-- Gentle Warm Smile -->
+              <path d="M111 121.5 C115.5 125.5 124.5 125.5 129 121.5" fill="none" stroke="#6D4B43" stroke-width="2" stroke-linecap="round" />
+              <path d="M109.8 120.8 L111.5 122.2 M130.2 120.8 L128.5 122.2" fill="none" stroke="#6D4B43" stroke-width="1.5" stroke-linecap="round" />
+              <path d="M116.5 127.8 C118.8 128.8 121.2 128.8 123.5 127.8" fill="none" stroke="#D98B7C" stroke-width="1.6" stroke-linecap="round" />
+
+              <!-- Floating Sparkles & Dots (Matching Original Illustration) -->
+              <!-- Left Tiny Dots -->
+              <circle cx="44" cy="98" r="1.4" fill="#8C7A6B" opacity="0.7" />
+              <circle cx="38" cy="112" r="1.1" fill="#8C7A6B" opacity="0.6" />
+              <circle cx="49" cy="119" r="2.2" fill="none" stroke="#8C7A6B" stroke-width="1.2" opacity="0.75" />
+
+              <!-- Right 4-Point Sparkle & Dots -->
+              <path
+                d="M191 65 Q191 72 197 72 Q191 72 191 79 Q191 72 185 72 Q191 72 191 65 Z"
+                fill="#FFF8E7"
+                stroke="#7C6A5B"
+                stroke-width="1.3"
+                stroke-linejoin="round"
+              />
+              <circle cx="203" cy="69" r="1.3" fill="#7C6A5B" opacity="0.75" />
+              <circle cx="192" cy="86" r="2.1" fill="none" stroke="#7C6A5B" stroke-width="1.2" opacity="0.75" />
+              <circle cx="201" cy="83" r="1.2" fill="#7C6A5B" opacity="0.75" />
+              <circle cx="207" cy="91" r="1.1" fill="#7C6A5B" opacity="0.6" />
+
+              <!-- Cute Blue Sparkle Speech Bubble on Lower Right -->
+              <g transform="translate(178, 104)">
+                <path
+                  d="M18 2 C27.5 2 34 7.8 34 15 C34 22.2 27.5 28 18 28 C14.5 28 11.3 27.2 8.6 25.8 L2 28.5 L4.8 22.4 C3.1 20.3 2 17.8 2 15 C2 7.8 8.5 2 18 2 Z"
+                  fill="url(#speech-blue)"
+                  stroke="#6D5B54"
+                  stroke-width="1.6"
+                  stroke-linejoin="round"
+                />
+                <!-- Big Sparkle inside Bubble -->
+                <path
+                  d="M17 8.5 Q17 15 23 15 Q17 15 17 21.5 Q17 15 11 15 Q17 15 17 8.5 Z"
+                  fill="#FFFDF7"
+                  stroke="#6D5B54"
+                  stroke-width="1.2"
+                  stroke-linejoin="round"
+                />
+                <!-- Tiny Companion Sparkle -->
+                <path
+                  d="M24.5 7.5 Q24.5 10.5 27.2 10.5 Q24.5 10.5 24.5 13.5 Q24.5 10.5 21.8 10.5 Q24.5 10.5 24.5 7.5 Z"
+                  fill="#FFFDF7"
+                  stroke="#6D5B54"
+                  stroke-width="1"
+                  stroke-linejoin="round"
+                />
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Product Name -->
+        <h1 class="relative z-10 font-display text-4xl font-bold tracking-tight text-sage-dark leading-tight">
+          กะวอ
+        </h1>
+
+        <!-- One-Line Promise (Updated for Fridge Visibility + Zero Duplicate Buying + Zero Waste) -->
+        <p class="relative z-10 mt-2 font-display text-[16.5px] font-medium text-ink leading-relaxed max-w-[320px] mx-auto">
+          รู้ว่าในตู้มีอะไร ไม่ซื้อซ้ำ ไม่ทิ้งของเสียอีกต่อไปนิ
+        </p>
+
+        <!-- Reassuring Sub-tag -->
+        <div class="relative z-10 mt-3.5 inline-flex items-center justify-center gap-2 rounded-full bg-terracotta-light/95 border border-terracotta-border/80 px-3.5 py-1.5 text-xs font-medium text-terracotta-dark">
+          <span>ไม่ต้องโหลดแอปใหม่</span>
+          <span class="opacity-50">•</span>
+          <span>ไม่ต้องจำคำสั่ง</span>
+        </div>
+      </header>
+
+      <!-- =========================================================
+           SECTION 2: THE PROBLEM (OVERBUYING + FORGOTTEN FOOD WASTE)
+      ========================================================== -->
+      <section aria-labelledby="problem-heading" class="rounded-[22px] bg-cream-card border border-[#EDE3D5] p-5 shadow-card">
+        <div class="flex items-center gap-2 mb-3.5">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-terracotta-light text-terracotta text-xs font-display font-bold">!</span>
+          <h2 id="problem-heading" class="font-display text-lg font-semibold text-ink">ปัญหาที่บ้านไหนก็เจอ</h2>
+        </div>
+
+        <!-- Two-Column Pain Points: Overbuying vs. Spoilage -->
+        <div class="grid grid-cols-2 gap-2.5 mb-3">
+          <!-- Pain 1: Duplicate / Overbuying -->
+          <div class="rounded-2xl bg-cream-bg border border-[#EFE6D8] p-3 text-center flex flex-col items-center">
+            <div class="w-10 h-10 rounded-xl bg-terracotta-light text-terracotta flex items-center justify-center mb-2">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M12 11v6" />
+                <path d="M9 14h6" />
+              </svg>
+            </div>
+            <p class="font-display text-[13px] font-semibold text-ink leading-snug">ซื้อของซ้ำ ซื้อเกิน</p>
+            <p class="mt-1 text-[11.5px] leading-snug text-ink-muted">เพราะไม่รู้ว่าในตู้ยังมีอยู่</p>
+          </div>
+
+          <!-- Pain 2: Forgotten & Wasted -->
+          <div class="rounded-2xl bg-cream-bg border border-[#EFE6D8] p-3 text-center flex flex-col items-center">
+            <div class="w-10 h-10 rounded-xl bg-sage-light text-sage-dark flex items-center justify-center mb-2">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5" y="2.5" width="14" height="19" rx="2.5" />
+                <line x1="5" y1="9.5" x2="19" y2="9.5" />
+                <line x1="8.5" y1="5.5" x2="8.5" y2="7.5" />
+                <line x1="8.5" y1="12.5" x2="8.5" y2="16" />
+              </svg>
+            </div>
+            <p class="font-display text-[13px] font-semibold text-ink leading-snug">ลืมไว้ท้ายตู้เย็น</p>
+            <p class="mt-1 text-[11.5px] leading-snug text-ink-muted">กว่าจะเห็น สุดท้ายต้องทิ้ง</p>
+          </div>
+        </div>
+
+        <!-- Why Fridge Apps Fail -->
+        <div class="flex items-start gap-3 rounded-2xl bg-terracotta-light/55 p-3.5 border border-terracotta-border/60">
+          <div class="shrink-0 w-9 h-9 rounded-xl bg-white text-terracotta flex items-center justify-center shadow-sm">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+              <line x1="10" y1="18" x2="14" y2="18" />
+              <path d="M9.5 8.5L14.5 13.5M14.5 8.5L9.5 13.5" />
+            </svg>
+          </div>
+          <p class="text-[13.5px] leading-relaxed text-ink">
+            แอปจดของในตู้เย็นมักเลิกใช้ เพราะเหนื่อยที่ต้องมีคนคอยนั่งกรอกอยู่คนเดียว
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SECTION 3: HOW IT WORKS — FULL 4-STEP PRODUCT LOOP + LINE CHAT
+      ========================================================== -->
+      <section aria-labelledby="how-heading" class="rounded-[24px] bg-cream-card border border-[#EDE3D5] p-5 shadow-card">
+        <div class="text-center mb-4">
+          <h2 id="how-heading" class="font-display text-xl font-bold text-sage-dark leading-snug">กะวอช่วยยังไง?</h2>
+          <p class="text-xs font-medium text-ink-muted mt-0.5">ครบวงจรของกินในบ้าน เห็นของในตู้ตรงกันทั้งบ้าน</p>
+        </div>
+
+        <!-- 4-Step Connected Visual Loop -->
+        <div class="space-y-2">
+
+          <!-- Step 1: Track & Shared Visibility -->
+          <div class="flex items-start gap-3.5 rounded-2xl bg-sage-light/70 border border-sage-mid/70 p-3.5">
+            <div class="shrink-0 w-11 h-11 rounded-xl bg-white text-sage flex items-center justify-center shadow-sm">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <span class="inline-block rounded-full bg-sage text-white font-display text-[11px] font-semibold px-2.5 py-0.5 mb-1">
+                1. จด &amp; เช็กของในตู้
+              </span>
+              <p class="text-[13.5px] leading-relaxed text-ink">
+                ใครซื้ออะไรก็พิมพ์บอก <span class="text-sage-dark font-medium">(“ซื้อไก่มา 2 แพ็ก”)</span> ทุกคนเห็นของในตู้ตรงกัน ก่อนซื้อก็เช็กได้ ไม่ซื้อซ้ำ
+              </p>
+            </div>
+          </div>
+
+          <!-- Arrow 1 -> 2 -->
+          <div class="flex justify-center -my-0.5" aria-hidden="true">
+            <svg class="w-5 h-5 text-sage/65" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="3" x2="12" y2="17" stroke-dasharray="2.5 3" />
+              <polyline points="8 14 12 18.5 16 14" />
+            </svg>
+          </div>
+
+          <!-- Step 2: Catch -->
+          <div class="flex items-start gap-3.5 rounded-2xl bg-terracotta-light/80 border border-terracotta-border/80 p-3.5">
+            <div class="shrink-0 w-11 h-11 rounded-xl bg-white text-terracotta flex items-center justify-center shadow-sm">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <span class="inline-block rounded-full bg-terracotta text-white font-display text-[11px] font-semibold px-2.5 py-0.5 mb-1">
+                2. เตือนก่อนเสีย
+              </span>
+              <p class="text-[13.5px] leading-relaxed text-ink">
+                ของใกล้หมดอายุ กะวอทักเตือนให้รีบทำกินวันนี้
+              </p>
+            </div>
+          </div>
+
+          <!-- Arrow 2 -> 3 -->
+          <div class="flex justify-center -my-0.5" aria-hidden="true">
+            <svg class="w-5 h-5 text-sage/65" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="3" x2="12" y2="17" stroke-dasharray="2.5 3" />
+              <polyline points="8 14 12 18.5 16 14" />
+            </svg>
+          </div>
+
+          <!-- Step 3: Cook -->
+          <div class="flex items-start gap-3.5 rounded-2xl bg-sage-light/70 border border-sage-mid/70 p-3.5">
+            <div class="shrink-0 w-11 h-11 rounded-xl bg-white text-sage-dark flex items-center justify-center shadow-sm">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 11h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-6z" />
+                <path d="M2 11h20" />
+                <path d="M9 7c0-1.2.8-2 .8-3" />
+                <path d="M15 7c0-1.2.8-2 .8-3" />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <span class="inline-block rounded-full bg-sage-dark text-white font-display text-[11px] font-semibold px-2.5 py-0.5 mb-1">
+                3. คิดเมนูให้
+              </span>
+              <p class="text-[13.5px] leading-relaxed text-ink">
+                ถาม <span class="text-sage-dark font-medium">“คืนนี้กินอะไรดี”</span> กะวอแนะนำเมนูจากของที่ใกล้หมดก่อน
+              </p>
+            </div>
+          </div>
+
+          <!-- Arrow 3 -> 4 (Dashed for upcoming step) -->
+          <div class="flex justify-center -my-0.5" aria-hidden="true">
+            <svg class="w-5 h-5 text-ink-soft/75" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="3" x2="12" y2="17" stroke-dasharray="2.5 3" />
+              <polyline points="8 14 12 18.5 16 14" />
+            </svg>
+          </div>
+
+          <!-- Step 4: Plan & Shop (COMING SOON inside the loop) -->
+          <div class="rounded-2xl bg-cream-bg/95 border-2 border-dashed border-[#D3C7B6] p-3.5">
+            <div class="flex items-start gap-3.5">
+              <div class="shrink-0 w-11 h-11 rounded-xl bg-white border border-[#E5DACB] text-ink-muted flex items-center justify-center">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="20" r="1.3" />
+                  <circle cx="19" cy="20" r="1.3" />
+                  <path d="M2 3h3l2.4 11.5a2 2 0 0 0 2 1.5h9.2a2 2 0 0 0 2-1.5L22 7H6.5" />
+                </svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                  <span class="inline-block rounded-full bg-[#E7DED0] text-ink font-display text-[11px] font-semibold px-2.5 py-0.5">
+                    4. วางแผน &amp; ช้อป
+                  </span>
+                  <span class="inline-flex items-center gap-1 rounded-full bg-terracotta-light border border-terracotta-border px-2 py-0.5 font-display text-[10.5px] font-semibold text-terracotta-dark">
+                    <span class="w-1.5 h-1.5 rounded-full bg-terracotta"></span>
+                    เร็วๆ นี้
+                  </span>
+                </div>
+                <p class="text-[13.5px] leading-relaxed text-ink-muted">
+                  วางแผนเมนูทั้งสัปดาห์ กะวอทำลิสต์ซื้อเฉพาะของที่ขาด ติ๊กตอนช้อป ของเข้าตู้ให้อัตโนมัติ
+                </p>
+              </div>
+            </div>
+
+            <!-- Subtle Loop-Back Indicator to Step 1 -->
+            <div class="mt-2.5 pt-2 border-t border-dashed border-[#DDD2C2] flex items-center justify-center gap-1.5 text-[11.5px] font-display font-medium text-sage-dark">
+              <svg class="w-4 h-4 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
+              <span>ของเข้าตู้แล้ว วนกลับไปข้อ 1 อัตโนมัติ!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Miniature LINE Group Chat Preview -->
+        <div class="mt-5 rounded-[20px] bg-line-bg border border-[#C7D6E8] overflow-hidden shadow-inner">
+          <!-- Mini LINE Header -->
+          <div class="bg-line-header/95 px-3.5 py-2.5 flex items-center justify-between border-b border-[#B9CAE0]">
+            <div class="flex items-center gap-2">
+              <span class="text-ink/70 text-sm font-bold" aria-hidden="true">‹</span>
+              <span class="font-display text-[13px] font-semibold text-ink">กลุ่มบ้านเรา 🏡</span>
+              <span class="text-[11px] text-ink-muted">(4)</span>
+            </div>
+            <div class="flex items-center gap-1.5" aria-hidden="true">
+              <span class="w-1.5 h-1.5 rounded-full bg-ink/40"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-ink/40"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-ink/40"></span>
+            </div>
+          </div>
+
+          <!-- Chat Messages -->
+          <div class="p-3 space-y-2.5 text-[13px] leading-relaxed">
+
+            <!-- Bubble 1: Dad/Member at market -->
+            <div class="flex flex-col items-end">
+              <span class="text-[10.5px] text-ink-muted mr-1.5 mb-0.5">พ่อ</span>
+              <div class="max-w-[82%] rounded-2xl rounded-tr-sm bg-line-green px-3 py-2 text-ink shadow-sm">
+                แวะตลาด ซื้อไข่ไก่เพิ่มดีมั้ย
+              </div>
+            </div>
+
+            <!-- Bubble 2: กะวอ (Preventing Duplicate Buying) -->
+            <div class="flex items-start gap-2">
+              <!-- Mini Inline SVG Avatar of กะวอ -->
+              <div class="shrink-0 w-9 h-9 rounded-full bg-[#FAF6F1] border border-white shadow-sm overflow-hidden mt-0.5">
+                <svg viewBox="0 0 120 120" class="w-full h-full rounded-full" aria-hidden="true">
+                  <circle cx="60" cy="60" r="60" fill="#F8F3EB" />
+                  <!-- Dusty-Rose Hijab -->
+                  <path d="M60 15 C37 15 26 33 25 58 C24 75 25 85 20 93 C28 98 39 101 52 102 L82 102 C92 98 98 91 100 83 C96 76 97 67 96 55 C95 31 83 15 60 15 Z" fill="#D4AEAA" stroke="#6D534D" stroke-width="2" />
+                  <!-- Undercap -->
+                  <path d="M36 48 C38 32 48 24 60 24 C72 24 82 32 84 48 C77 35 70 30 60 30 C50 30 43 35 36 48 Z" fill="#8B6964" />
+                  <!-- Cream Top -->
+                  <path d="M22 120 C25 103 33 93 44 89 L78 89 C89 93 97 103 100 120 Z" fill="#EFE7D6" stroke="#6D534D" stroke-width="2" />
+                  <!-- Hijab Scarf Tail -->
+                  <path d="M62 91 L81 87 C82 100 81 111 79 120 L58 120 C59 109 61 100 62 91 Z" fill="#D4AEAA" stroke="#6D534D" stroke-width="2" />
+                  <!-- Neck Drape -->
+                  <path d="M26 78 C35 89 51 95 69 94 C83 93 94 87 100 82 C95 95 77 103 57 102 C38 101 24 95 19 90 C22 86 25 82 26 78 Z" fill="#D4AEAA" stroke="#6D534D" stroke-width="2" />
+                  <!-- Face -->
+                  <path d="M37 53 C37 37 47 29 60 29 C73 29 83 37 83 53 C83 72 73 86 60 86 C47 86 37 72 37 53 Z" fill="#FBE4D3" stroke="#6D534D" stroke-width="2" />
+                  <!-- Rosy Cheeks -->
+                  <ellipse cx="45" cy="66" rx="6.5" ry="4.5" fill="#E99A88" opacity="0.45" />
+                  <ellipse cx="75" cy="66" rx="6.5" ry="4.5" fill="#E99A88" opacity="0.45" />
+                  <!-- Eyebrows & Eyes -->
+                  <path d="M43 48 C46 46 51 46 54 48" fill="none" stroke="#685049" stroke-width="2" stroke-linecap="round" />
+                  <path d="M66 48 C69 46 74 46 77 48" fill="none" stroke="#685049" stroke-width="2" stroke-linecap="round" />
+                  <circle cx="48.5" cy="56" r="4.2" fill="#4E3831" />
+                  <circle cx="47.2" cy="54.6" r="1.4" fill="#FFFFFF" />
+                  <circle cx="71.5" cy="56" r="4.2" fill="#4E3831" />
+                  <circle cx="70.2" cy="54.6" r="1.4" fill="#FFFFFF" />
+                  <!-- Nose & Smile -->
+                  <path d="M59.5 60 C58.8 63 58.5 64.5 60 65.5" fill="none" stroke="#8C675A" stroke-width="1.5" stroke-linecap="round" />
+                  <path d="M54 72 C57 75 63 75 66 72" fill="none" stroke="#6D4B43" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="min-w-0 max-w-[82%]">
+                <span class="block text-[10.5px] font-medium text-ink-muted ml-1 mb-0.5">กะวอ</span>
+                <div class="rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-ink shadow-sm">
+                  ในตู้ยังมีไข่ไก่อยู่อีก 8 ฟองนิ ไม่ต้องซื้อเพิ่มจ้า เดี๋ยวทานไม่ทัน! 🥚✨
+                </div>
+              </div>
+            </div>
+
+            <!-- Subtle Time Divider -->
+            <div class="flex justify-center py-0.5">
+              <span class="rounded-full bg-ink/10 px-2.5 py-0.5 text-[10px] text-ink/70">ตอนเย็น</span>
+            </div>
+
+            <!-- Bubble 3: Member -->
+            <div class="flex flex-col items-end">
+              <span class="text-[10.5px] text-ink-muted mr-1.5 mb-0.5">ลูก</span>
+              <div class="max-w-[78%] rounded-2xl rounded-tr-sm bg-line-green px-3 py-2 text-ink shadow-sm">
+                คืนนี้กินอะไรดี
+              </div>
+            </div>
+
+            <!-- Bubble 4: กะวอ (Cook suggestion using expiring items) -->
+            <div class="flex items-start gap-2">
+              <!-- Mini Inline SVG Avatar of กะวอ -->
+              <div class="shrink-0 w-9 h-9 rounded-full bg-[#FAF6F1] border border-white shadow-sm overflow-hidden mt-0.5">
+                <svg viewBox="0 0 120 120" class="w-full h-full rounded-full" aria-hidden="true">
+                  <circle cx="60" cy="60" r="60" fill="#F8F3EB" />
+                  <!-- Dusty-Rose Hijab -->
+                  <path d="M60 15 C37 15 26 33 25 58 C24 75 25 85 20 93 C28 98 39 101 52 102 L82 102 C92 98 98 91 100 83 C96 76 97 67 96 55 C95 31 83 15 60 15 Z" fill="#D4AEAA" stroke="#6D534D" stroke-width="2" />
+                  <!-- Undercap -->
+                  <path d="M36 48 C38 32 48 24 60 24 C72 24 82 32 84 48 C77 35 70 30 60 30 C50 30 43 35 36 48 Z" fill="#8B6964" />
+                  <!-- Cream Top -->
+                  <path d="M22 120 C25 103 33 93 44 89 L78 89 C89 93 97 103 100 120 Z" fill="#EFE7D6" stroke="#6D534D" stroke-width="2" />
+                  <!-- Hijab Scarf Tail -->
+                  <path d="M62 91 L81 87 C82 100 81 111 79 120 L58 120 C59 109 61 100 62 91 Z" fill="#D4AEAA" stroke="#6D534D" stroke-width="2" />
+                  <!-- Neck Drape -->
+                  <path d="M26 78 C35 89 51 95 69 94 C83 93 94 87 100 82 C95 95 77 103 57 102 C38 101 24 95 19 90 C22 86 25 82 26 78 Z" fill="#D4AEAA" stroke="#6D534D" stroke-width="2" />
+                  <!-- Face -->
+                  <path d="M37 53 C37 37 47 29 60 29 C73 29 83 37 83 53 C83 72 73 86 60 86 C47 86 37 72 37 53 Z" fill="#FBE4D3" stroke="#6D534D" stroke-width="2" />
+                  <!-- Rosy Cheeks -->
+                  <ellipse cx="45" cy="66" rx="6.5" ry="4.5" fill="#E99A88" opacity="0.45" />
+                  <ellipse cx="75" cy="66" rx="6.5" ry="4.5" fill="#E99A88" opacity="0.45" />
+                  <!-- Eyebrows & Eyes -->
+                  <path d="M43 48 C46 46 51 46 54 48" fill="none" stroke="#685049" stroke-width="2" stroke-linecap="round" />
+                  <path d="M66 48 C69 46 74 46 77 48" fill="none" stroke="#685049" stroke-width="2" stroke-linecap="round" />
+                  <circle cx="48.5" cy="56" r="4.2" fill="#4E3831" />
+                  <circle cx="47.2" cy="54.6" r="1.4" fill="#FFFFFF" />
+                  <circle cx="71.5" cy="56" r="4.2" fill="#4E3831" />
+                  <circle cx="70.2" cy="54.6" r="1.4" fill="#FFFFFF" />
+                  <!-- Nose & Smile -->
+                  <path d="M59.5 60 C58.8 63 58.5 64.5 60 65.5" fill="none" stroke="#8C675A" stroke-width="1.5" stroke-linecap="round" />
+                  <path d="M54 72 C57 75 63 75 66 72" fill="none" stroke="#6D4B43" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="min-w-0 max-w-[82%]">
+                <span class="block text-[10.5px] font-medium text-ink-muted ml-1 mb-0.5">กะวอ</span>
+                <div class="rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-ink shadow-sm">
+                  ผักบุ้งใกล้หมดแล้ว ทำผัดผักบุ้งกับไข่เจียวจากไข่ในตู้มั้ยนิ? 🥬🍳
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SECTION 4: WHY IT WORKS (SHARED FRIDGE VISIBILITY)
+      ========================================================== -->
+      <section aria-labelledby="why-heading" class="rounded-[24px] bg-sage-light border border-sage-mid p-5 shadow-card">
+        <div class="flex items-center gap-3 mb-3.5">
+          <div class="shrink-0 w-12 h-12 rounded-2xl bg-white text-sage flex items-center justify-center shadow-sm">
+            <svg class="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9.5" cy="10" r="3" />
+              <circle cx="18.5" cy="10" r="3" />
+              <path d="M4.5 21c0-3 2.2-5 5-5s5 2 5 5" />
+              <path d="M13.5 21c0-3 2.2-5 5-5s5 2 5 5" />
+              <path d="M14 5.5c1.2-1.3 3.2-1.3 4.4 0" opacity="0.6" />
+            </svg>
+          </div>
+          <h2 id="why-heading" class="font-display text-lg font-bold text-sage-dark leading-snug">
+            ทำไมถึงเวิร์กจริงทั้งบ้าน?
+          </h2>
+        </div>
+
+        <div class="space-y-2.5">
+          <div class="flex items-start gap-2.5 rounded-2xl bg-white/90 px-3.5 py-3">
+            <span class="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-sage text-white flex items-center justify-center text-xs font-bold" aria-hidden="true">✓</span>
+            <p class="text-[14px] leading-relaxed text-ink">
+              เห็นของในตู้พร้อมกันทั้งบ้าน ก่อนเข้าตลาดหรือซูเปอร์ก็ไม่ซื้อซ้ำ ไม่ซื้อเกิน
+            </p>
+          </div>
+          <div class="flex items-start gap-2.5 rounded-2xl bg-white/90 px-3.5 py-3">
+            <span class="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-sage text-white flex items-center justify-center text-xs font-bold" aria-hidden="true">✓</span>
+            <p class="text-[14px] leading-relaxed text-ink">
+              อยู่ในกลุ่มไลน์บ้านที่ใช้อยู่แล้ว พ่อแม่ก็พิมพ์คุยได้ตามปกติ — ช่วยกันอัปเดตทั้งบ้าน ไม่ใช่ภาระของคนเดียว
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SECTION 5: BONUS (CHORES)
+      ========================================================== -->
+      <section aria-labelledby="bonus-heading" class="rounded-[24px] bg-terracotta-light border border-terracotta-border p-5 shadow-card">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <span class="inline-block rounded-full bg-terracotta text-white font-display text-[11px] font-semibold px-3 py-0.5 mb-2">
+              โบนัสพิเศษ
+            </span>
+            <h2 id="bonus-heading" class="font-display text-lg font-bold text-ink leading-snug">
+              แถมช่วยเรื่องงานบ้านด้วยนะ
+            </h2>
+          </div>
+
+          <div class="shrink-0 w-12 h-12 rounded-2xl bg-white text-terracotta flex items-center justify-center shadow-sm">
+            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 11l2 2 4-4" />
+              <rect x="4" y="4" width="16" height="16" rx="3" />
+              <path d="M9 16h6" />
+            </svg>
+          </div>
+        </div>
+
+        <p class="mt-2.5 text-[14px] leading-relaxed text-ink">
+          จัดเวรงานบ้าน + ทวงงานแทน พี่น้องไม่ต้องทะเลาะหรือคอยทวงกันเอง
+        </p>
+
+        <!-- Punchy Quote Pill -->
+        <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-white border border-terracotta-border px-4 py-1.5 shadow-sm">
+          <span class="font-display text-[14px] font-semibold text-terracotta-dark">“ให้กะวอเป็นคนทวงแทนนิ”</span>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SECTION 6: WHO IT'S FOR
+      ========================================================== -->
+      <section aria-labelledby="who-heading" class="rounded-[24px] bg-cream-card border border-[#EDE3D5] p-5 shadow-card">
+        <div class="text-center mb-3.5">
+          <h2 id="who-heading" class="font-display text-lg font-bold text-ink">เหมาะกับบ้านแบบไหน?</h2>
+          <p class="inline-block mt-1 rounded-full bg-cream-bg border border-[#EAE0D2] px-3 py-0.5 text-xs font-medium text-ink-muted">
+            บ้านที่มี 2 คนขึ้นไป
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Card A -->
+          <div class="rounded-2xl bg-sage-light/60 border border-sage-mid/70 p-3.5 flex flex-col justify-between">
+            <div class="w-9 h-9 rounded-xl bg-white text-sage flex items-center justify-center mb-2.5 shadow-sm">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <p class="text-[13.5px] leading-relaxed text-ink font-medium">
+              บ้านที่ช่วยกันทำงานบ้านอยู่แล้ว อยากให้จัดการง่ายขึ้น
+            </p>
+          </div>
+
+          <!-- Card B -->
+          <div class="rounded-2xl bg-terracotta-light/70 border border-terracotta-border/80 p-3.5 flex flex-col justify-between">
+            <div class="w-9 h-9 rounded-xl bg-white text-terracotta flex items-center justify-center mb-2.5 shadow-sm">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="16" y1="11" x2="22" y2="11" />
+              </svg>
+            </div>
+            <p class="text-[13.5px] leading-relaxed text-ink font-medium">
+              บ้านที่มีคนแบกอยู่คนเดียว แล้วอยากชวนคนอื่นในบ้านมาช่วยกัน
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SECTION 7: TRANSPARENT PDPA & PRIVACY SUMMARY
+      ========================================================== -->
+      <section aria-labelledby="pdpa-heading" class="rounded-[24px] bg-cream-card border border-[#E5DACB] p-5 shadow-card">
+        <!-- Section Header -->
+        <div class="flex items-start gap-3 mb-4">
+          <div class="shrink-0 w-11 h-11 rounded-2xl bg-sage-light text-sage-dark flex items-center justify-center border border-sage-mid/70 shadow-sm">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+          <div>
+            <h2 id="pdpa-heading" class="font-display text-lg font-bold text-sage-dark leading-snug">
+              ข้อมูลของคุณอยู่ยังไง? (PDPA)
+            </h2>
+            <p class="text-xs font-medium text-ink-muted mt-0.5 leading-relaxed">
+              บอกกันตรงๆ ไม่มีหมกเม็ด อ่านเข้าใจง่ายก่อนเริ่มใช้
+            </p>
+          </div>
+        </div>
+
+        <!-- 4 Transparent, Easy-to-Scan Privacy Cards -->
+        <div class="space-y-2.5">
+
+          <!-- Card 1: What we collect -->
+          <div class="rounded-2xl bg-cream-bg border border-[#EDE3D5] p-3.5">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-sage-light text-sage-dark text-xs font-display font-bold">1</span>
+              <h3 class="font-display text-[14px] font-semibold text-ink">เก็บข้อมูลอะไรบ้าง</h3>
+            </div>
+            <p class="text-[13px] leading-relaxed text-ink-muted">
+              ชื่อ/ID ไลน์, ข้อความที่คุยกับกะวอ, รายการของในตู้เย็น/ลิสต์ซื้อของ/งานบ้าน และสถิติการใช้งาน <span class="text-ink font-medium">(ไม่เก็บข้อความแชทในบันทึกสถิติ)</span>
+            </p>
+            <div class="mt-2 rounded-xl bg-terracotta-light/85 border border-terracotta-border/80 px-3 py-2 flex items-start gap-2">
+              <span class="text-xs mt-0.5 shrink-0" aria-hidden="true">⚠️</span>
+              <p class="text-[12px] leading-snug text-terracotta-dark font-medium">
+                ห้ามส่งข้อมูลอ่อนไหว เช่น เลขบัตรประชาชน บัญชีธนาคาร หรือข้อมูลสุขภาพ
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 2: Where data goes (Honest disclosure) -->
+          <div class="rounded-2xl bg-cream-bg border border-[#EDE3D5] p-3.5">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-sage-light text-sage-dark text-xs font-display font-bold">2</span>
+              <h3 class="font-display text-[14px] font-semibold text-ink">ส่งข้อมูลไปที่ไหนบ้าง (บอกตามจริง)</h3>
+            </div>
+            <p class="text-[13px] leading-relaxed text-ink-muted">
+              กะวอทำงานผ่าน <strong class="text-ink font-semibold">LINE</strong>, <strong class="text-ink font-semibold">Google</strong> (เก็บข้อมูลใน Google Sheets/Drive ส่วนตัว และส่งข้อความที่คุยกับกะวอไปให้ <strong class="text-ink font-semibold">Gemini AI</strong> ช่วยคิดคำตอบ) และ <strong class="text-ink font-semibold">GitHub Pages</strong> (ไม่เก็บข้อมูลส่วนตัว) ซึ่งอาจประมวลผลบนเซิร์ฟเวอร์ต่างประเทศ
+            </p>
+          </div>
+
+          <!-- Card 3: Who can see it -->
+          <div class="rounded-2xl bg-cream-bg border border-[#EDE3D5] p-3.5">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-sage-light text-sage-dark text-xs font-display font-bold">3</span>
+              <h3 class="font-display text-[14px] font-semibold text-ink">ใครเห็นข้อมูลได้บ้าง</h3>
+            </div>
+            <p class="text-[13px] leading-relaxed text-ink-muted">
+              เห็นแค่คนในกลุ่มบ้านคุณ และคุณเด๋อ (สืบสกุล บาฮา) ผู้ดูแลโครงการเพื่อดูแลระบบเท่านั้น
+            </p>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <span class="rounded-full bg-sage-light border border-sage-mid/70 px-2.5 py-0.5 text-[11.5px] font-display font-medium text-sage-dark">บ้านอื่นไม่เห็น</span>
+              <span class="rounded-full bg-sage-light border border-sage-mid/70 px-2.5 py-0.5 text-[11.5px] font-display font-medium text-sage-dark">ไม่มีโฆษณา</span>
+              <span class="rounded-full bg-sage-light border border-sage-mid/70 px-2.5 py-0.5 text-[11.5px] font-display font-medium text-sage-dark">ไม่ขายข้อมูล</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Your rights & retention -->
+          <div class="rounded-2xl bg-cream-bg border border-[#EDE3D5] p-3.5">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-sage-light text-sage-dark text-xs font-display font-bold">4</span>
+              <h3 class="font-display text-[14px] font-semibold text-ink">สิทธิ์ของคุณเต็ม 100%</h3>
+            </div>
+            <p class="text-[13px] leading-relaxed text-ink-muted">
+              ขอดู แก้ไข ลบข้อมูลทั้งหมด หรือยกเลิกเมื่อไหร่ก็ได้ • เก็บข้อมูลไว้ไม่เกิน <strong class="text-ink font-semibold">30 วัน</strong> หลังจบโครงการ (หรือลบเร็วกว่านั้นเมื่อแจ้ง) • แบ็กอัปรายวันลบอัตโนมัติใน <strong class="text-ink font-semibold">14 วัน</strong>
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Button to Open Full 13-Section Thai PDPA Document -->
+        <button
+          id="open-pdpa-btn"
+          type="button"
+          class="mt-4 w-full rounded-2xl bg-sage-light/85 hover:bg-sage-light active:scale-[0.98] transition-all duration-150 border border-sage/35 px-4 py-3 font-display text-[13.5px] font-semibold text-sage-dark flex items-center justify-center gap-2 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-sage/50"
+        >
+          <span aria-hidden="true">📄</span>
+          <span>อ่านประกาศความเป็นส่วนตัว (PDPA) ฉบับเต็ม 13 ข้อ</span>
+        </button>
+      </section>
+
+      <!-- =========================================================
+           SECTION 8: CALL TO ACTION (FOOTER CARD)
+      ========================================================== -->
+      <footer class="rounded-[24px] bg-sage-dark text-white px-5 py-6 text-center shadow-soft relative overflow-hidden">
+        <!-- Subtle warm decorative circles -->
+        <div class="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/5" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute -bottom-10 -left-10 w-28 h-28 rounded-full bg-terracotta/20" aria-hidden="true"></div>
+
+        <div class="relative z-10">
+          <h2 class="font-display text-xl font-bold leading-snug">
+            ชวนบ้านคุณมาลองใช้ฟรี 30 วัน!
+          </h2>
+          <p class="mt-2 text-[14px] text-sage-light/95 leading-relaxed max-w-[300px] mx-auto">
+            พากะวอเข้ากลุ่มไลน์บ้านคุณได้เลย ไม่มีค่าใช้จ่ายในช่วงทดลองนิ
+          </p>
+
+          <!-- Prominent Rounded CTA Button -->
+          <button
+            id="cta-button"
+            type="button"
+            class="mt-4 w-full rounded-full bg-terracotta hover:bg-terracotta-dark active:scale-[0.98] transition-all duration-150 px-6 py-3.5 font-display text-[15.5px] font-semibold text-white shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/80"
+          >
+            ร่วมทดลองใช้ฟรี 30 วัน
+          </button>
+        </div>
+      </footer>
+
+      <!-- Warm Tiny Sign-off -->
+      <p class="text-center text-xs text-ink-soft pt-1 pb-2 leading-relaxed">
+        กะวอ • ผู้ช่วยใจดีประจำกลุ่มไลน์บ้านเรา
+      </p>
+
+    </div>
+  </main>
+
+  <!-- =========================================================
+       MODAL 1: PILOT JOIN MODAL (WITH PDPA REMINDER)
+  ========================================================== -->
+  <div
+    id="pilot-modal"
+    class="hidden fixed inset-0 z-40 flex items-center justify-center bg-ink/50 backdrop-blur-[2px] px-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+  >
+    <div class="w-full max-w-[370px] rounded-[24px] bg-cream-card border border-terracotta-border p-5 text-center shadow-phone">
+      <div class="mx-auto w-12 h-12 rounded-full bg-sage-light text-sage flex items-center justify-center mb-3">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      </div>
+      <h3 id="modal-title" class="font-display text-lg font-bold text-sage-dark">
+        ยินดีต้อนรับสู่ช่วงทดลองฟรี 30 วัน!
+      </h3>
+      <p class="mt-2 text-[14px] leading-relaxed text-ink-muted">
+        ทักแชทคนที่ส่งรูปนี้มาใน LINE เพื่อรับลิงก์ชวนกะวอเข้ากลุ่มบ้านของคุณได้เลยนิ 🏡
+      </p>
+
+      <!-- Transparent PDPA Onboarding Reminder -->
+      <div class="mt-3.5 rounded-2xl bg-sage-light/70 border border-sage-mid/80 p-3 text-left">
+        <p class="text-[12.5px] leading-relaxed text-ink">
+          <strong class="font-display font-semibold text-sage-dark">ก่อนเริ่มใช้งานจริง:</strong> แอดมินกลุ่มบ้านจะได้อ่านและกดปุ่ม <strong class="font-semibold">“ยอมรับ”</strong> ประกาศความเป็นส่วนตัว (PDPA) ในกลุ่ม LINE ก่อนที่กะวอจะเริ่มทำงาน
+        </p>
+        <button
+          id="pilot-open-pdpa"
+          type="button"
+          class="mt-1.5 inline-flex items-center gap-1 font-display text-[12.5px] font-semibold text-terracotta-dark underline underline-offset-2 hover:text-terracotta cursor-pointer"
+        >
+          <span>📄 อ่านประกาศ PDPA ฉบับเต็ม 13 ข้อ</span>
+        </button>
+      </div>
+
+      <button
+        id="modal-close"
+        type="button"
+        class="mt-4 w-full rounded-full bg-sage hover:bg-sage-dark active:scale-[0.98] transition-all duration-150 px-5 py-2.5 font-display text-sm font-semibold text-white cursor-pointer"
+      >
+        เข้าใจแล้วจ้า
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 2: FULL 13-SECTION THAI PDPA PRIVACY NOTICE & CONSENT
+  ========================================================== -->
+  <div
+    id="pdpa-modal"
+    class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/55 backdrop-blur-[2px] sm:p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="pdpa-modal-title"
+  >
+    <div class="w-full sm:max-w-[440px] max-h-[90vh] flex flex-col rounded-t-[28px] sm:rounded-[24px] bg-cream-card border-t sm:border border-[#E5DACB] shadow-phone overflow-hidden">
+
+      <!-- Sticky Modal Header -->
+      <div class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 bg-sage-light/85 border-b border-sage-mid/80">
+        <div class="min-w-0">
+          <p class="text-[11px] font-display font-semibold text-sage-dark uppercase tracking-wide">
+            PDPA • ฉบับเต็ม 13 ข้อ
+          </p>
+          <h3 id="pdpa-modal-title" class="font-display text-[16px] font-bold text-ink leading-snug">
+            ประกาศความเป็นส่วนตัวและการให้ความยินยอม
+          </h3>
+        </div>
+        <button
+          id="pdpa-close-top"
+          type="button"
+          aria-label="ปิดหน้าต่าง"
+          class="shrink-0 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-ink-muted hover:text-ink flex items-center justify-center border border-sage-mid/60 shadow-sm cursor-pointer"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Scrollable Full Thai PDPA Content -->
+      <div id="pdpa-full-text" class="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-[13.5px] leading-relaxed text-ink">
+
+        <!-- Document Header & Intro -->
+        <div class="rounded-2xl bg-cream-bg border border-[#EDE3D5] p-3.5">
+          <p class="font-display font-semibold text-sage-dark text-[14px]">
+            โครงการทดลองใช้งาน “กะวอ” (Kawo Pilot)
+          </p>
+          <p class="text-[12px] text-ink-muted mt-0.5">
+            ฉบับร่างสำหรับโครงการทดลองใช้กะวอ เวอร์ชัน 1 • อัปเดตล่าสุด: 21 พ.ย. 2026
+          </p>
+          <p class="mt-2 text-[13px] text-ink">
+            ประกาศฉบับนี้อธิบายว่า “กะวอ” (Kawo) เก็บรวบรวมข้อมูลส่วนบุคคลใดบ้างในช่วงทดลองใช้งาน ใช้เพื่อวัตถุประสงค์ใด ใครสามารถเข้าถึงได้ และสิทธิ์ของคุณภายใต้พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) กรุณาอ่านให้เข้าใจก่อนที่กะวอจะเริ่มทำงานในกลุ่ม LINE ของบ้านคุณ
+          </p>
+        </div>
+
+        <!-- 1 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">1. ผู้รับผิดชอบและผู้ควบคุมข้อมูลของคุณ</h4>
+          <p>
+            กะวอเป็นโครงการทดลองที่ดำเนินการโดย <strong>สืบสกุล บาฮา (“เด๋อ”)</strong> ซึ่งทำหน้าที่เป็นผู้ควบคุมข้อมูลส่วนบุคคล (Data Controller)
+          </p>
+          <p class="mt-1 text-ink-muted">
+            ช่องทางติดต่อสำหรับคำถามหรือคำขอเกี่ยวกับความเป็นส่วนตัว: <strong>suebsakul.baha@gmail.com</strong> หรือ LINE: <strong>suebsakulb</strong>
+          </p>
+        </div>
+
+        <!-- 2 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">2. กะวอคืออะไร และโครงการทดลองนี้เกี่ยวข้องกับอะไรบ้าง</h4>
+          <p>
+            กะวอ (Kawo) คือผู้ช่วยประจำบ้านที่อยู่ในกลุ่ม LINE ของครอบครัว และในเว็บแอปที่เปิดผ่าน LINE ช่วยจดและเช็กของในตู้เย็น ลดปัญหาอาหารเหลือทิ้ง วางแผนมื้ออาหาร ทำรายการซื้อของ และช่วยแบ่งเวรงานบ้าน
+          </p>
+          <p class="mt-1">
+            โครงการนี้เป็นการทดลองใช้งานฟรี 30 วันสำหรับครอบครัวที่ได้รับเชิญจำนวนจำกัด โดยมีวัตถุประสงค์เพื่อทดสอบว่ากะวอมีประโยชน์ในการใช้งานจริงหรือไม่ และนำผลมาปรับปรุงให้ดียิ่งขึ้น
+          </p>
+        </div>
+
+        <!-- 3 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">3. ข้อมูลที่เราเก็บรวบรวม</h4>
+          <ul class="space-y-2 list-disc pl-5">
+            <li>
+              <strong>ข้อมูลจาก LINE:</strong> LINE User ID และชื่อที่แสดง (Display Name) ของคุณ รวมถึง Group ID ของกลุ่ม LINE บ้านคุณ และข้อความที่คุณส่งถึงกะวอในกลุ่ม เพื่อให้กะวออ่านทำความเข้าใจและทำตามคำขอ (เช่น “ใช้ไข่ไป 2 ฟอง”)
+            </li>
+            <li>
+              <strong>ข้อมูลครัวเรือนที่คุณกรอก:</strong> รายการของในตู้เย็นและที่เก็บของ จำนวน วันหมดอายุ และตำแหน่งที่เก็บ • รายการซื้อของ สูตรอาหาร เวรงานบ้าน และการตั้งค่าบ้าน (เช่น ชื่อสมาชิกและคำที่ให้กะวอใช้เรียกแต่ละคน) • ประวัติการทำรายการ (ใครเพิ่ม ใช้ ทิ้ง หรือย้ายของชิ้นใด และเมื่อไหร่)
+            </li>
+            <li>
+              <strong>ข้อมูลการใช้งาน (Usage Data):</strong> จำนวนครั้งและเวลาที่ทำรายการ (เช่น จำนวนข้อความที่ส่งถึงกะวอ การเปิดดูเว็บแอป งานบ้านที่ทำเสร็จ) โดย<strong>ไม่จัดเก็บเนื้อหาข้อความแชทของคุณไว้ในบันทึกสถิติการใช้งานนี้</strong>
+            </li>
+            <li>
+              <strong>ข้อเสนอแนะ (เฉพาะกรณีที่คุณเข้าร่วมกลุ่มผู้ทดสอบ):</strong> ข้อความข้อเสนอแนะและภาพหน้าจอที่คุณส่งในกลุ่มดังกล่าว
+            </li>
+          </ul>
+          <div class="mt-2 rounded-xl bg-terracotta-light/85 border border-terracotta-border px-3 py-2 text-[12.5px] text-terracotta-dark font-medium">
+            เราไม่ขอเก็บข้อมูลอ่อนไหว และขอความร่วมมือไม่ส่งข้อมูลอ่อนไหวให้กะวอ เช่น ข้อมูลสุขภาพ เลขบัตรประจำตัวประชาชน หรือรายละเอียดบัญชีธนาคาร
+          </div>
+        </div>
+
+        <!-- 4 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">4. วัตถุประสงค์ในการใช้ข้อมูลของคุณ</h4>
+          <ul class="space-y-1 list-disc pl-5">
+            <li>เพื่อให้บริการกะวอสำหรับบ้านของคุณ เช่น การตอบแชท การแจ้งเตือน แผนอาหารประจำสัปดาห์ และการใช้งานเว็บแอป</li>
+            <li>เพื่อวัดผลโครงการทดลอง เช่น ความถี่ในการใช้งานของครัวเรือน และปริมาณอาหารที่ถูกนำไปใช้หรือต้องทิ้ง</li>
+            <li>เพื่อแก้ไขปัญหาและปรับปรุงการทำงานของกะวอ</li>
+            <li>เพื่อติดต่อสอบถามข้อเสนอแนะของคุณระหว่างช่วงทดลอง</li>
+          </ul>
+          <p class="mt-1.5 font-medium text-sage-dark">
+            เราไม่ขายข้อมูลของคุณ ไม่มีโฆษณา และไม่นำข้อมูลของคุณไปใช้เพื่อวัตถุประสงค์อื่นนอกเหนือจากโครงการทดลองกะวอ
+          </p>
+        </div>
+
+        <!-- 5 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">5. ฐานกฎหมายในการประมวลผลข้อมูล</h4>
+          <p>
+            เราประมวลผลข้อมูลของคุณโดยอาศัย<strong>ความยินยอมของคุณ</strong> และเนื่องจากมีความจำเป็นเพื่อให้บริการกะวอตามที่บ้านของคุณร้องขอใช้งาน
+          </p>
+        </div>
+
+        <!-- 6 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">6. ผู้ให้บริการภายนอกและการส่งข้อมูลไปต่างประเทศ</h4>
+          <p class="mb-1.5">กะวอใช้บริการต่อไปนี้เพื่อให้ระบบทำงานได้:</p>
+          <ul class="space-y-1.5 list-disc pl-5">
+            <li><strong>LINE (LY Corporation):</strong> ระบบรับ-ส่งข้อความ และ LINE Login</li>
+            <li><strong>Google:</strong> ใช้ Google Sheets และ Google Drive เพื่อจัดเก็บข้อมูลและสำรองข้อมูล, ใช้ Apps Script เพื่อประมวลผลการทำงานของกะวอ และใช้ <strong>Gemini API</strong> เพื่อทำความเข้าใจและตอบกลับข้อความ โดยข้อความที่ส่งถึงกะวอพร้อมข้อมูลครัวเรือนที่จำเป็นต่อการตอบคำถามจะถูกส่งไปยัง Gemini เพื่อสร้างคำตอบ</li>
+            <li><strong>GitHub Pages:</strong> ใช้โฮสต์หน้าเว็บแอป โดยไม่มีการจัดเก็บข้อมูลส่วนบุคคลไว้บนบริการนี้</li>
+          </ul>
+          <p class="mt-1.5 text-ink-muted">
+            ผู้ให้บริการเหล่านี้อาจประมวลผลข้อมูลบนเซิร์ฟเวอร์ที่ตั้งอยู่นอกประเทศไทย โดยเราจะส่งเฉพาะข้อมูลที่จำเป็นต่อการทำงานของกะวอเท่านั้น
+          </p>
+        </div>
+
+        <!-- 7 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">7. ใครสามารถมองเห็นข้อมูลของคุณได้บ้าง</h4>
+          <ul class="space-y-1 list-disc pl-5">
+            <li><strong>สมาชิกในกลุ่มบ้านของคุณตามสิทธิ์ที่ได้รับ:</strong> แอดมิน (Admin) และผู้แก้ไข (Editor) สามารถดูและแก้ไขข้อมูลได้ ส่วนผู้ดู (Viewer) สามารถดูข้อมูลได้เท่านั้น</li>
+            <li><strong>คุณเด๋อ ในฐานะผู้ดูแลระบบ:</strong> เพื่อการให้บริการ ช่วยเหลือ แก้ไขปัญหา และวัดผลโครงการทดลอง</li>
+            <li><strong>ครอบครัวอื่นในโครงการทดลองไม่สามารถมองเห็นข้อมูลของบ้านคุณได้</strong></li>
+          </ul>
+        </div>
+
+        <!-- 8 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">8. ระยะเวลาในการจัดเก็บข้อมูล</h4>
+          <ul class="space-y-1 list-disc pl-5">
+            <li>จัดเก็บตลอดระยะเวลาโครงการทดลอง และเก็บไว้ต่อไม่เกิน <strong>30 วัน</strong> หลังสิ้นสุดโครงการหรือหลังบ้านคุณออกจากการทดลอง เว้นแต่คุณจะแจ้งให้ลบเร็วกว่านั้น</li>
+            <li>ไฟล์สำรองข้อมูลรายวัน (Daily backups) จะถูกเก็บไว้ <strong>14 วัน</strong> แล้วลบออกโดยอัตโนมัติ</li>
+            <li>หากคุณเลือกใช้งานกะวอต่อหลังจบโครงการทดลอง เราจะแจ้งให้คุณทราบหากมีการเปลี่ยนแปลงเงื่อนไขนี้ก่อนเสมอ</li>
+          </ul>
+        </div>
+
+        <!-- 9 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">9. วิธีการปกป้องข้อมูลของคุณ</h4>
+          <ul class="space-y-1 list-disc pl-5">
+            <li>ข้อมูลถูกจัดเก็บใน Google Sheets และโฟลเดอร์ Google Drive ส่วนตัวที่ไม่ได้เปิดแชร์เป็นสาธารณะ</li>
+            <li>มีเพียงคุณเด๋อเท่านั้นที่มีสิทธิ์เข้าถึงในฐานะผู้ดูแลระบบ และระบบจะตรวจสอบสิทธิ์การเข้าถึงของแต่ละบ้านในทุกการทำรายการ</li>
+            <li>มีการสำรองข้อมูลทุกวันเพื่อป้องกันข้อมูลสูญหายโดยไม่ตั้งใจ</li>
+          </ul>
+        </div>
+
+        <!-- 10 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">10. สิทธิ์ของคุณภายใต้กฎหมาย PDPA</h4>
+          <p class="mb-1">ภายใต้ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 คุณสามารถ:</p>
+          <ul class="space-y-1 list-disc pl-5">
+            <li>ขอทราบว่าเราเก็บข้อมูลใดของคุณไว้บ้าง และขอรับสำเนาข้อมูล</li>
+            <li>ขอให้แก้ไขข้อมูลที่ไม่ถูกต้องให้เป็นปัจจุบัน</li>
+            <li>ขอให้ลบข้อมูลของคุณ หรือลบข้อมูลทั้งหมดของบ้านคุณ</li>
+            <li>ถอนความยินยอมได้ทุกเมื่อ โดยกะวอจะหยุดทำงานในกลุ่มของคุณ และข้อมูลจะถูกลบเมื่อคุณแจ้งความประสงค์</li>
+            <li>คัดค้าน หรือขอให้จำกัดการใช้ข้อมูลของคุณ</li>
+            <li>ร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.) หากเชื่อว่าข้อมูลของคุณถูกนำไปใช้โดยมิชอบ</li>
+          </ul>
+          <p class="mt-1.5 text-ink-muted">
+            หากต้องการใช้สิทธิ์ใดๆ ข้างต้น กรุณาติดต่อผ่านช่องทางในข้อ 1 เราจะตอบกลับภายใน <strong>30 วัน</strong>
+          </p>
+        </div>
+
+        <!-- 11 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">11. กรณีเด็กและเยาวชน</h4>
+          <p>
+            หากมีเด็กหรือเยาวชนในบ้านใช้งานกะวอ แอดมินของกลุ่มบ้าน (ซึ่งควรเป็นบิดา มารดา หรือผู้ปกครอง) จะเป็นผู้ให้ความยินยอมแทน
+          </p>
+        </div>
+
+        <!-- 12 -->
+        <div>
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1">12. การเปลี่ยนแปลงประกาศฉบับนี้</h4>
+          <p>
+            หากมีการเปลี่ยนแปลงประกาศฉบับนี้ระหว่างโครงการทดลอง เราจะแจ้งให้บ้านของคุณทราบในกลุ่ม LINE ก่อนที่การเปลี่ยนแปลงจะมีผลบังคับใช้
+          </p>
+        </div>
+
+        <!-- 13 -->
+        <div class="rounded-2xl bg-sage-light/65 border border-sage-mid p-3.5">
+          <h4 class="font-display font-bold text-sage-dark text-[14.5px] mb-1.5">13. การให้ความยินยอม (Consent)</h4>
+          <p class="mb-1.5">การยืนยันด้านล่างถือว่าแอดมินกลุ่มบ้านตกลงในนามของสมาชิกในบ้านว่า:</p>
+          <ul class="space-y-1 list-disc pl-5 mb-2.5">
+            <li>ได้อ่านประกาศฉบับนี้และส่งต่อให้สมาชิกในกลุ่มบ้านรับทราบแล้ว</li>
+            <li>ยินยอมให้กะวอเก็บรวบรวมและใช้ข้อมูลตามที่ระบุไว้ข้างต้น รวมถึงการส่งข้อความไปยัง Gemini API</li>
+          </ul>
+          <div class="space-y-1 text-[12.5px] text-ink-muted bg-white/85 rounded-xl p-2.5 border border-sage-mid/60">
+            <p>ชื่อบ้าน: ______________________</p>
+            <p>ชื่อแอดมิน: ______________________</p>
+            <p>วันที่: ______________________</p>
+          </div>
+          <p class="mt-2 text-[12.5px] text-sage-dark font-medium">
+            วิธียืนยัน: ในกลุ่ม LINE แอดมินกดปุ่ม <strong>“ยอมรับ”</strong> เมื่อกะวอแสดงประกาศนี้ระหว่างขั้นตอนเริ่มต้นใช้งาน
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Sticky Modal Footer -->
+      <div class="shrink-0 px-5 py-3.5 bg-cream-bg border-t border-[#EAE0D2] flex items-center gap-2.5">
+        <button
+          id="copy-pdpa-btn"
+          type="button"
+          class="flex-1 rounded-full bg-white hover:bg-sage-light/60 active:scale-[0.98] transition-all duration-150 border border-sage/35 px-4 py-2.5 font-display text-[13px] font-semibold text-sage-dark cursor-pointer"
+        >
+          📋 คัดลอกฉบับเต็ม
+        </button>
+        <button
+          id="pdpa-close-bottom"
+          type="button"
+          class="flex-1 rounded-full bg-sage hover:bg-sage-dark active:scale-[0.98] transition-all duration-150 px-4 py-2.5 font-display text-[13px] font-semibold text-white cursor-pointer"
+        >
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimal Vanilla JS for Interactive Modals & Copy -->
+  <script>
+    (function () {
+      try {
+        const ctaButton = document.getElementById('cta-button');
+        const pilotModal = document.getElementById('pilot-modal');
+        const pilotCloseBtn = document.getElementById('modal-close');
+        const pilotOpenPdpaBtn = document.getElementById('pilot-open-pdpa');
+
+        const openPdpaBtn = document.getElementById('open-pdpa-btn');
+        const pdpaModal = document.getElementById('pdpa-modal');
+        const pdpaCloseTop = document.getElementById('pdpa-close-top');
+        const pdpaCloseBottom = document.getElementById('pdpa-close-bottom');
+        const copyPdpaBtn = document.getElementById('copy-pdpa-btn');
+        const pdpaFullText = document.getElementById('pdpa-full-text');
+
+        function syncBodyScroll() {
+          const anyOpen =
+            (pilotModal && !pilotModal.classList.contains('hidden')) ||
+            (pdpaModal && !pdpaModal.classList.contains('hidden'));
+          document.body.classList.toggle('overflow-hidden', anyOpen);
+        }
+
+        function openPilotModal() {
+          if (!pilotModal) return;
+          pilotModal.classList.remove('hidden');
+          syncBodyScroll();
+        }
+
+        function closePilotModal() {
+          if (!pilotModal) return;
+          pilotModal.classList.add('hidden');
+          syncBodyScroll();
+        }
+
+        function openPdpaModal() {
+          if (!pdpaModal) return;
+          pdpaModal.classList.remove('hidden');
+          if (pdpaFullText) pdpaFullText.scrollTop = 0;
+          syncBodyScroll();
+        }
+
+        function closePdpaModal() {
+          if (!pdpaModal) return;
+          pdpaModal.classList.add('hidden');
+          syncBodyScroll();
+        }
+
+        if (ctaButton) ctaButton.addEventListener('click', openPilotModal);
+        if (pilotCloseBtn) pilotCloseBtn.addEventListener('click', closePilotModal);
+        if (openPdpaBtn) openPdpaBtn.addEventListener('click', openPdpaModal);
+        if (pdpaCloseTop) pdpaCloseTop.addEventListener('click', closePdpaModal);
+        if (pdpaCloseBottom) pdpaCloseBottom.addEventListener('click', closePdpaModal);
+
+        // Open PDPA modal directly from inside the Pilot Join modal
+        if (pilotOpenPdpaBtn) {
+          pilotOpenPdpaBtn.addEventListener('click', function () {
+            closePilotModal();
+            openPdpaModal();
+          });
+        }
+
+        // Copy full Thai PDPA text using document.execCommand('copy') for iFrame compatibility
+        if (copyPdpaBtn && pdpaFullText) {
+          copyPdpaBtn.addEventListener('click', function () {
+            try {
+              const textToCopy = pdpaFullText.innerText.trim();
+              const tempTextarea = document.createElement('textarea');
+              tempTextarea.value = textToCopy;
+              tempTextarea.setAttribute('readonly', '');
+              tempTextarea.style.position = 'fixed';
+              tempTextarea.style.top = '-9999px';
+              document.body.appendChild(tempTextarea);
+              tempTextarea.select();
+              document.execCommand('copy');
+              document.body.removeChild(tempTextarea);
+
+              const originalLabel = copyPdpaBtn.textContent;
+              copyPdpaBtn.textContent = '✓ คัดลอกแล้ว!';
+              setTimeout(function () {
+                copyPdpaBtn.textContent = originalLabel;
+              }, 2000);
+            } catch (copyErr) {
+              console.error('Copy failed:', copyErr);
+            }
+          });
+        }
+
+        // Close modals when tapping outside the card
+        if (pilotModal) {
+          pilotModal.addEventListener('click', function (event) {
+            if (event.target === pilotModal) closePilotModal();
+          });
+        }
+
+        if (pdpaModal) {
+          pdpaModal.addEventListener('click', function (event) {
+            if (event.target === pdpaModal) closePdpaModal();
+          });
+        }
+
+        // Close active modal on Escape key
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') {
+            if (pdpaModal && !pdpaModal.classList.contains('hidden')) {
+              closePdpaModal();
+            } else if (pilotModal && !pilotModal.classList.contains('hidden')) {
+              closePilotModal();
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Modal interaction error:', err);
+      }
+    })();
+  </script>
+</body>
+</html>

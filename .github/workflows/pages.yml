@@ -68,9 +68,12 @@ jobs:
           mkdir site
           # only the page files: no .git, .github, docs
           cp prod/*.html prod/*.css prod/*.js site/
+          # v13.0: persona icons (public pictures only), if the folder exists
+          if [ -d prod/personas ]; then cp -r prod/personas site/; fi
           if [ -d devsrc ]; then
             mkdir site/dev
             cp devsrc/*.html devsrc/*.css devsrc/*.js site/dev/
+            if [ -d devsrc/personas ]; then cp -r devsrc/personas site/dev/; fi
           fi
           touch site/.nojekyll
           ls -R site

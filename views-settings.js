@@ -8,7 +8,9 @@
   'use strict';
   const K = window.KAWO, el = K.el;
   let sub = 'members';
-  const multi = function () { return !!K.hid; };   // v11.0 household (else: a server without households)
+  const multi = function () { return !!K.hid; };
+  // v13.0: the household's persona name in the texts that mention her
+  const her = function () { return (K.S.meta && K.S.meta.persona && K.S.meta.persona.name) || 'กะวอ'; };   // v11.0 household (else: a server without households)
   const ROLE_OPTS = [{ v: 'admin', t: 'ผู้ดูแลบ้าน' }, { v: 'editor', t: 'แก้ไขได้' }, { v: 'viewer', t: 'ดูอย่างเดียว' }];
   let dictQuery = '';
 
@@ -32,7 +34,7 @@
       return [
         el('h3', { text: m.name + (m.me ? ' (ฉัน)' : '') }),
         field('ชื่อในบ้านนี้', name),
-        field('กะวอเรียกว่า', call),
+        field(her() + 'เรียกว่า', call),
         field('วิธีพูดด้วย (ไม่ใส่ก็ได้)', note),
         field('สิทธิ์', role),
         el('p', { class: 'hint', text: 'ผู้ดูแลบ้าน = แก้ไขได้ + ตั้งค่าบ้าน + เปลี่ยนสิทธิ์ · ต้องมีผู้ดูแลอย่างน้อย 1 คน' }),
@@ -47,9 +49,9 @@
   function renderMembersMulti(wrap) {
     const admin = K.isAdmin();
     const roleTh = {}; ROLE_OPTS.forEach(function (o) { roleTh[o.v] = o.t; });
-    wrap.appendChild(el('p', { class: 'hint', text: 'คนในกลุ่มไลน์ของบ้านนี้ที่เคยพิมพ์หรือเปิดแอปจะมาอยู่ที่นี่' + (admin ? ' · แตะเพื่อแก้ชื่อ ชื่อที่กะวอเรียก และสิทธิ์' : '') }));
+    wrap.appendChild(el('p', { class: 'hint', text: 'คนในกลุ่มไลน์ของบ้านนี้ที่เคยพิมพ์หรือเปิดแอปจะมาอยู่ที่นี่' + (admin ? ' · แตะเพื่อแก้ชื่อ ชื่อที่' + her() + 'เรียก และสิทธิ์' : '') }));
     wrap.appendChild(K.group('สมาชิก (' + K.S.members.length + ')', K.S.members.map(function (m) {
-      const sub = [roleTh[m.role] || m.role, m.callName ? 'กะวอเรียก "' + m.callName + '"' : null, m.note || null].filter(Boolean).join(' · ');
+      const sub = [roleTh[m.role] || m.role, m.callName ? her() + 'เรียก "' + m.callName + '"' : null, m.note || null].filter(Boolean).join(' · ');
       const kids = [el('div', { class: 'main' }, [m.name + (m.me ? ' (ฉัน)' : ''), el('span', { class: 'sub', text: sub })]), admin ? el('span', { class: 'end', text: '✏️' }) : null];
       return admin ? el('button', { class: 'row', type: 'button', on: { click: function () { memberForm(m); } } }, kids) : el('div', { class: 'row' }, kids);
     })));
@@ -102,7 +104,7 @@
       return [
         el('h3', { text: isNew ? 'เพิ่มของใหม่' : d.name }),
         el('div', { class: 'sub', text: isNew ? 'ชื่อเปลี่ยนทีหลังไม่ได้' : 'แก้แล้วใช้กับของที่เพิ่มใหม่ ของในตู้ตอนนี้ไม่เปลี่ยน' }),
-        d.review ? el('div', { class: 'banner warn', text: '🆕 กะวอเพิ่มอันนี้ให้จากเมนู โดยลอกค่าจากของที่คล้ายกัน ตรวจแล้วกดบันทึก ป้ายต้องตรวจจะหายไป' }) : null,
+        d.review ? el('div', { class: 'banner warn', text: '🆕 ' + her() + 'เพิ่มอันนี้ให้จากเมนู โดยลอกค่าจากของที่คล้ายกัน ตรวจแล้วกดบันทึก ป้ายต้องตรวจจะหายไป' }) : null,
         isNew ? field('ชื่อ', name) : null,
         field('ชื่ออื่นที่พิมพ์ได้', aliases),
         el('div', { class: 'field row2' }, [field('ประเภท', cat), field('เก็บที่', loc)]),
@@ -131,7 +133,7 @@
       const typeTh = {}; K.S.meta.types.forEach(function (t) { typeTh[t.id] = t.th; });
       const reviewN = K.S.dict.filter(function (d) { return d.review; }).length;
       box.replaceChildren(
-        reviewN ? el('div', { class: 'banner warn', text: '🆕 กะวอเพิ่มของใหม่จากเมนู ' + reviewN + ' อย่าง แตะเพื่อตรวจวันหมดอายุ หน่วย และที่เก็บ แล้วกดบันทึก' }) : el('span'),
+        reviewN ? el('div', { class: 'banner warn', text: '🆕 ' + her() + 'เพิ่มของใหม่จากเมนู ' + reviewN + ' อย่าง แตะเพื่อตรวจวันหมดอายุ หน่วย และที่เก็บ แล้วกดบันทึก' }) : el('span'),
         K.group('ของ (' + list.length + ')', list.slice(0, 150).map(function (d) {
           const bits = [K.catTh(d.cat), d.loc ? K.locTh(d.loc) : 'ตามประเภท', typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
           return el('button', { class: 'row' + (d.review ? ' soon' : ''), type: 'button', on: { click: function () { dictForm(d); } } }, [

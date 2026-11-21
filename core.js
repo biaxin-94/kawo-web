@@ -1,5 +1,5 @@
 /*
- * กะวอ web app core (v12.0): login, server calls, app state, tabs, shared UI pieces.
+ * กะวอ web app core (v13.0): login, server calls, app state, tabs, shared UI pieces.
  * Each section (views-*.js) registers a tab with KAWO.tab({...}).
  * The page never decides permissions itself: the server checks every write. Viewers just see
  * disabled controls (KAWO.canEdit()) so they don't try.
@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '12.0';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '13.0';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -343,19 +343,20 @@
     who.hidden = false;
     // v11.0: the household's name, and a switcher when the person is in more than one
     const house = K.S.meta && K.S.meta.houseName;
+    const who2 = (K.S.meta && K.S.meta.persona && K.S.meta.persona.name) || 'กะวอ';   // v13.0: the household's persona
     const many = (K.S.households || []).length > 1;
     const brand = document.querySelector('.brand');
     brand.replaceChildren(many
-      ? el('button', { class: 'house', type: 'button', 'aria-label': 'เปลี่ยนบ้าน', on: { click: K.pickHousehold } }, ['🏠 ' + (house || 'กะวอ') + ' ▾'])
-      : document.createTextNode('🏠 ' + (house || 'กะวอ')));
-    document.title = house ? 'กะวอ · ' + house : 'กะวอ';
+      ? el('button', { class: 'house', type: 'button', 'aria-label': 'เปลี่ยนบ้าน', on: { click: K.pickHousehold } }, ['🏠 ' + (house || who2) + ' ▾'])
+      : document.createTextNode('🏠 ' + (house || who2)));
+    document.title = house ? who2 + ' · ' + house : who2;
 
     const banners = K.$('banners');
     const b = [];
     if (K.S.version && K.S.version !== APP_VERSION) {
       b.push(el('div', { class: 'banner bad', text: 'หน้าเว็บ v' + APP_VERSION + ' ไม่ตรงกับระบบ v' + K.S.version + ' ลองปิดแล้วเปิดใหม่ (ถ้ายังไม่หาย บอกเด๊ะ)' }));
     }
-    if (CFG.ENV === 'dev') b.push(el('div', { class: 'banner bad', text: '🧪 DEV: หน้าทดสอบ ใช้ข้อมูลชีตทดสอบ ไม่ใช่ของจริง' }));
+    // v13.0: no red DEV banner any more (our family's real household lives on dev); the footer still says DEV.
     if (!K.canEdit()) b.push(el('div', { class: 'banner info', text: '👀 บัญชีนี้ดูได้อย่างเดียว' + (house ? 'ใน' + house : '') + ' ปุ่มแก้ไขจะกดไม่ได้' }));
     K.tabs.forEach(function (t) { if (t.banner) { const n = t.banner(); if (n) b.push(n); } });
     banners.replaceChildren.apply(banners, b);

@@ -1279,5 +1279,25 @@
       }
     })();
   </script>
+
+  <!-- v13.0: one page for both personas. Default พี่เพ็ญ (the pilot OA); pilot.html?p=kawo keeps กะวอ.
+       Only the name changes here; the avatar and chat examples are กะวอ's drawing and voice. -->
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(location.search).get('p') || 'penn';
+        if (p !== 'penn') return;
+        var name = 'พี่เพ็ญ';
+        var swap = function (t) { return t.split('กะวอ').join(name); };
+        var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+        var n;
+        while ((n = walk.nextNode())) { if (n.nodeValue.indexOf('กะวอ') >= 0) n.nodeValue = swap(n.nodeValue); }
+        document.querySelectorAll('[aria-label],[title],[alt]').forEach(function (el) {
+          ['aria-label', 'title', 'alt'].forEach(function (a) { var v = el.getAttribute(a); if (v && v.indexOf('กะวอ') >= 0) el.setAttribute(a, swap(v)); });
+        });
+        document.title = swap(document.title);
+      } catch (e) { /* the page still works with the original name */ }
+    })();
+  </script>
 </body>
 </html>

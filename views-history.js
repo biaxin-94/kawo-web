@@ -11,7 +11,8 @@
     { id: 'stats', label: '📊 สถิติ', hidden: true },   // the stats dashboard will live here
   ];
   const ACTION_TH = { add: 'เพิ่ม', shopping_confirm: 'ซื้อเข้าตู้', use: 'ใช้', toss: 'ทิ้ง', move: 'ย้าย',
-    stock_check_remove: 'หมดแล้ว (เช็กของ)', undo: 'ยกเลิก', mixed: 'ทำรายการ' };
+    stock_check_remove: 'หมดแล้ว (เช็กของ)', stock_check_add: 'เจอเพิ่ม (เช็กของ)', expiry_extend: 'ยังดีอยู่ (ต่อวันหมด)',
+    undo: 'เลิกทำ', mixed: 'ทำรายการ' };
   let section = 'history';
   let H = null;            // {days, next, members, items, actions}
   let filters = { item: '', member: '', action: '' };

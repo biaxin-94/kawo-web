@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '13.4';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '14.0';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -93,7 +93,7 @@
   };
 
   /* ---------------- households (v11.0) ---------------- */
-  const HH_KEYS = ['shop.v1', 'cook.v1', 'freezeDismissed'];   // phone storage that belongs to one household
+  const HH_KEYS = ['shop.v1', 'cook.v1', 'check.v1', 'freezeDismissed'];   // phone storage that belongs to one household
   const hhHooks = [];
   /** Storage key for this household's data ('kawo.<hid>.<base>'; no household = the pre-v11 key). */
   K.hkey = function (base, hid) { hid = hid === undefined ? K.hid : hid; return hid ? 'kawo.' + hid + '.' + base : 'kawo.' + base; };
@@ -172,7 +172,9 @@
     if (res.ok && hh !== K.hid) return res;   // answered for a household we've switched away from: don't show its data
     if (res.ok) {
       K.absorb(res);
-      if (!opts.quiet && res.data && res.data.text) K.toast(res.data.text);
+      // v14.0: a change the server can undo gets the เลิกทำ bar instead of the plain message
+      if (res.data && res.data.undo && !opts.noUndo) K.undoBar(res.data.undo, opts.undoLabel || res.data.text);
+      else if (!opts.quiet && res.data && res.data.text) K.toast(res.data.text);
       K.render();
     } else {
       if (res.error === 'forbidden' && res.me) { K.absorb(res); K.render(); }
@@ -232,6 +234,33 @@
   };
 
   /**
+   * v14.0: "แอปเปิ้ล หมดแล้ว · เลิกทำ" for about 10 seconds after a saved change. One at a time (a new save
+   * replaces it). เลิกทำ asks the server to put that whole batch back; it says what it couldn't undo.
+   */
+  const UNDO_SHOW_MS = 10000;
+  let undoTimer = null;
+  K.undoBar = function (batch, label) {
+    const old = K.$('undobar'); if (old) old.remove();
+    clearTimeout(undoTimer);
+    const t = K.$('toast'); if (t) t.remove();
+    const text = String(label || 'บันทึกแล้ว').split('\n')[0].slice(0, 80);
+    const bar = el('div', { id: 'undobar', class: 'undobar', role: 'status' }, [
+      el('span', { class: 'txt', text: text }),
+      el('button', { class: 'btn small', type: 'button', text: 'เลิกทำ', on: { click: async function () {
+        bar.remove(); clearTimeout(undoTimer);
+        const res = await K.write('undo', { batch: batch }, { quiet: true, force: true });
+        if (res.ok) {
+          const d = res.data || {};
+          if (d.skipped && d.skipped.length) K.toast('↩️ เลิกทำแล้ว ยกเว้น ' + d.skipped.join(', ') + ' (มีคนแก้ไปแล้ว)', true);
+          else K.toast('↩️ เลิกทำแล้ว');
+        }
+      } } }),
+    ]);
+    document.body.appendChild(bar);
+    undoTimer = setTimeout(function () { bar.remove(); }, UNDO_SHOW_MS);
+  };
+
+  /**
    * Bottom sheet. build(close) returns the content nodes. Returns close().
    * onDismiss runs when the person closes it themselves (tap outside / Esc), not when code calls close().
    */
@@ -251,12 +280,20 @@
     return close;
   };
 
-  /** Number stepper. Returns {node, get()}. */
-  K.stepper = function (value, min, max, unit, onChange) {
-    const input = el('input', { type: 'number', inputmode: 'numeric', min: min, max: max, value: value, 'aria-label': 'จำนวน' });
-    const clamp = function (v) { v = Math.round(Number(v) || min); return Math.max(min, Math.min(max, v)); };
-    const set = function (v) { input.value = clamp(v); if (onChange) onChange(Number(input.value)); };
-    input.addEventListener('change', function () { set(input.value); });
+  /**
+   * Number stepper. Returns {node, get()}. Tapping the number selects it, so it can be typed straight away.
+   * opts.onUnder (v14.0): − at the minimum calls it instead of doing nothing (batch use: unticks the item).
+   */
+  K.stepper = function (value, min, max, unit, onChange, opts) {
+    opts = opts || {};
+    const input = el('input', { type: 'number', inputmode: 'numeric', min: min, max: max, value: value, 'aria-label': opts.label || 'จำนวน' });
+    const clamp = function (v) { v = Math.round(Number(v)); if (!isFinite(v)) v = min; return Math.max(min, Math.min(max, v)); };
+    const set = function (v) {
+      if (Number(v) < min && opts.onUnder) { opts.onUnder(); return; }
+      input.value = clamp(v); if (onChange) onChange(Number(input.value));
+    };
+    input.addEventListener('change', function () { set(input.value === '' ? min : input.value); });
+    input.addEventListener('focus', function () { try { input.select(); } catch (e) { /* ignore */ } });
     const node = el('span', { class: 'stepper' }, [
       el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - 1); } } }),
       input,
@@ -319,8 +356,13 @@
     K.tabs.sort(function (a, b) { return TAB_ORDER.indexOf(a.id) - TAB_ORDER.indexOf(b.id); });
   };
 
-  K.go = function (id) {
+  K.go = function (id, force) {
     const from = K.tabs.filter(function (t) { return t.id === K.current; })[0];
+    // v14.0: a page with unsaved changes (เช็กของ) asks first; "ออกเลย" lets it drop them
+    if (!force && from && from.id !== id && from.unsaved && from.unsaved()) {
+      K.confirmSheet('ยังไม่ได้บันทึก ออกเลยไหม?', 'ที่แก้ไว้จะหายไป', 'ออกเลย', function () { if (from.discard) from.discard(); K.go(id, true); }, true);
+      return;
+    }
     if (from && from.nav !== false) lastMain = from.id;
     K.current = id;
     K.store.set('kawo.tab', id);
@@ -333,6 +375,11 @@
     const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
     K.go((t && t.parent) || lastMain || LANDING);
   };
+
+  window.addEventListener('beforeunload', function (e) {
+    const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
+    if (t && t.unsaved && t.unsaved()) { e.preventDefault(); e.returnValue = ''; }   // the draft stays on the phone anyway
+  });
 
   K.renderBusy = function () { document.body.style.cursor = K.busy ? 'progress' : ''; };
 

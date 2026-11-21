@@ -1,5 +1,5 @@
 /*
- * ตู้เย็น (fridge + storage, with ✅ / 🗑 / 🧊 and the freeze suggestion) and เช็คของ (stock check).
+ * ตู้เย็น (fridge + storage, with ✅ / 🗑 / 🧊 and the freeze suggestion) and เช็กของ (stock check, v14.0: saved once on confirm).
  */
 (function () {
   'use strict';
@@ -156,8 +156,10 @@
     };
     let right = null;
     if (on && it.type === 'flag') right = el('span', { class: 'end', text: 'หมด' });
-    else if (on && it.qty > 1 && !cook.pending) {
-      right = K.stepper(Math.min(cook.sel[it.id], it.qty), 1, it.qty, K.unitWord(it.type, it.unit), function (v) { cook.sel[it.id] = v; saveCook(); }).node;
+    else if (on && !cook.pending) {
+      // v14.0: − at 1 unticks it (not used, it stays in the fridge); ticking again starts back at 1
+      right = K.stepper(Math.min(cook.sel[it.id], it.qty), 1, it.qty, K.unitWord(it.type, it.unit), function (v) { cook.sel[it.id] = v; saveCook(); },
+        { onUnder: function () { delete cook.sel[it.id]; saveCook(); K.render(); } }).node;
     } else if (on) right = el('span', { class: 'end', text: cook.sel[it.id] + ' ' + K.unitWord(it.type, it.unit) });
     const where = K.locTh(it.loc) + (it.left !== null && it.loc !== 'Freezer' && it.loc !== 'Storage' ? ' · ' + K.leftText(it.left, it.exp) : '') + (isOpt ? ' · ของเสริม' : '');
     return el('div', { class: 'row' + (on ? ' picked' : '') }, [
@@ -259,7 +261,7 @@
     // v11.0: the batch goes to the household it was made in, even if the page switched meanwhile
     const c = cook, key = cookKey, hh = c.pending.hh === undefined ? K.hid : c.pending.hh;
     cookSending = true; K.render();
-    const res = await K.write('useItems', c.pending.payload, { reqId: c.pending.reqId, quiet: true, force: true, hh: hh });
+    const res = await K.write('useItems', c.pending.payload, { reqId: c.pending.reqId, quiet: true, force: true, hh: hh, noUndo: true });
     cookSending = false;
     const here = c === cook;
     if (res.ok) {
@@ -282,6 +284,7 @@
         d.listed.length ? el('p', { class: 'hint', text: '🛒 ใส่รายการซื้อแล้ว: ' + d.listed.join(', ') }) : null,
         el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () {
           close();
+          if (d.undo) K.undoBar(d.undo, '🍳 ใช้ไป ' + d.used.length + ' อย่าง');   // v14.0
           // Ran out, but the confirm screen couldn't know (someone used some meanwhile): ask now.
           const names = d.notOffered || [];
           if (names.length) {
@@ -315,8 +318,10 @@
     ]));
     // v12.0: เช็กของ, 🍳 ใช้ทำกับข้าว and ทำอะไรกินดี open from here (they used to be tabs / a button).
     // Viewers don't get 🍳 at all (the server refuses their writes anyway); the other two are read-only for them.
+    const lc = lastCheckLine();
+    if (lc) wrap.appendChild(lc);
     wrap.appendChild(el('div', { class: 'tools' }, [
-      el('button', { class: 'btn', type: 'button', text: '📋 เช็กของ', on: { click: function () { K.go('stock'); } } }),
+      K.canEdit() ? el('button', { class: 'btn', type: 'button', text: '📋 เช็กของ', on: { click: function () { K.go('stock'); } } }) : null,
       K.canEdit() && S.items.length ? el('button', { class: 'btn primary', type: 'button', text: '🍳 ใช้ทำกับข้าว', on: { click: function () { startCook(); } } }) : null,
       el('button', { class: 'btn', type: 'button', text: '🍽 ทำอะไรกินดี', on: { click: function () { K.go('cook'); } } }),
     ]));
@@ -367,31 +372,344 @@
     badge: function () { return K.S.items.filter(function (i) { return i.loc !== 'Freezer' && i.loc !== 'Storage' && i.left !== null && i.left <= K.S.meta.alertDays; }).length; },
   });
 
-  /* ---------------- เช็คของ tab ("ยังมีอยู่ไหม?") ---------------- */
-  function renderStock() {
-    const S = K.S, can = K.canEdit(), today = S.meta.today;
-    const wrap = el('div', {}, [
-      el('h1', { class: 'title', text: 'ยังมีอยู่ไหม?' }),
-      el('p', { class: 'hint', text: 'ไล่ดูของจริงในตู้ แตะ ยังมี หรือ หมดแล้ว (หมดแล้ว = ไม่นับเป็นใช้/ทิ้ง)' }),
+  /* ---------------- last stock check line (ตู้เย็น landing, v14.0) ---------------- */
+  function daysAgo(ymd) {
+    return Math.round((Date.parse(K.S.meta.today + 'T00:00:00Z') - Date.parse(ymd + 'T00:00:00Z')) / 864e5);
+  }
+  function lastCheckLine() {
+    const m = K.S.meta;
+    if (!m || !('lastCheck' in m)) return null;   // an older server: no line
+    const lc = m.lastCheck, due = m.checkOverdueDays || 7;
+    let text, hot = false;
+    if (!lc) { text = 'ยังไม่เคยเช็กของ'; hot = true; }
+    else {
+      const d = daysAgo(lc.ymd);
+      if (d >= due) { text = 'ไม่ได้เช็กของมา ' + d + ' วันแล้ว'; hot = true; }
+      else text = 'เช็กของล่าสุด: ' + (d <= 0 ? 'วันนี้' : d === 1 ? 'เมื่อวาน' : d + ' วันก่อน') + (lc.by ? ' (' + lc.by + ')' : '');
+    }
+    return el('div', { class: 'lastcheck' + (hot ? ' due' : '') }, [
+      el('span', { text: '📋 ' + text }),
+      K.canEdit() ? el('button', { class: 'btn small' + (hot ? ' primary' : ''), type: 'button', text: 'เช็กเลย', on: { click: function () { K.go('stock'); } } }) : null,
     ]);
-    FRIDGE_LOCS.concat(['Storage']).forEach(function (loc) {
-      const list = S.items.filter(function (i) { return i.loc === loc; }).sort(byExpiry);
-      if (!list.length) return;
-      const checkedN = list.filter(function (i) { return i.checked === today; }).length;
-      wrap.appendChild(K.group(K.locTh(loc) + ' (' + checkedN + '/' + list.length + ')', list.map(function (i) {
-        const done = i.checked === today;
-        return el('div', { class: 'row' + (done ? ' done' : '') }, [
-          itemLine(i, false),
-          el('button', { class: 'pill ok', type: 'button', disabled: !can || done, text: done ? '✓ ยังมี' : 'ยังมี',
-            on: { click: function () { K.write('stockCheck', { id: i.id, have: true }, { quiet: true }); } } }),
-          el('button', { class: 'pill no', type: 'button', disabled: !can, text: 'หมดแล้ว',
-            on: { click: function () { K.write('stockCheck', { id: i.id, have: false }); } } }),
-        ]);
-      })));
+  }
+
+  /* ---------------- เช็กของ (v14.0) ---------------- */
+  /*
+   * "แตะเฉพาะของที่ไม่ตรง": the page assumes everything is right. Changes stay on the phone (per household, like the
+   * shopping ticks) until ยืนยัน, then go to the server in ONE request (stockCheckSave) with one request ID that is
+   * kept until the server answers, so weak signal never loses or doubles anything.
+   *   chk = {base: {id: qty when first touched}, now: {id: qty}, exp: {id: 'toss'|'keep'}, why: {id: use|toss|unsure},
+   *          found: [{key, name, qty, zone, cat?, unit}], done: {zone: 1}, pending: {reqId, hh, payload} | null}
+   * Zone progress (done) is phone-only. The server checks every "was" quantity and skips items someone changed.
+   */
+  const CHECK_ZONES = ['Chill', 'Fridge', 'Freezer', 'Pantry'];   // the order people open things; ตู้เก็บของ last
+  let checkKey = K.hkey('check.v1');
+  let chk = K.store.get(checkKey, null);
+  let chkSending = false;
+  function saveChk() { if (chk) K.store.set(checkKey, chk); else K.store.del(checkKey); }
+  K.onHousehold(function () { checkKey = K.hkey('check.v1'); chk = K.store.get(checkKey, null); });
+  function newDraft() { return { base: {}, now: {}, exp: {}, why: {}, found: [], done: {}, pending: null }; }
+
+  function checkZones() {
+    const z = CHECK_ZONES.filter(K.zoneOn).concat(['Storage']);
+    if (K.S.items.some(function (i) { return z.indexOf(i.loc) < 0; })) z.push('other');
+    return z;
+  }
+  function inZone(i, zone, zones) { return zone === 'other' ? zones.indexOf(i.loc) < 0 : i.loc === zone; }
+  function isExpired(i) { return i.loc !== 'Storage' && i.left !== null && i.left !== undefined && i.left < 0; }
+  function cur(it) { return chk.now[it.id] !== undefined ? chk.now[it.id] : it.qty; }
+  function baseOf(it) { return chk.base[it.id] !== undefined ? chk.base[it.id] : it.qty; }
+  function changeCount() { return chk ? Object.keys(chk.now).length + Object.keys(chk.exp).length + chk.found.length : 0; }
+
+  /** Drop draft entries for items that are gone (used elsewhere since). */
+  function tidyDraft() {
+    if (!chk || chk.pending) return;
+    ['now', 'exp', 'why', 'base'].forEach(function (k) { Object.keys(chk[k]).forEach(function (id) { if (!itemById(id)) delete chk[k][id]; }); });
+  }
+
+  function setQty(it, v) {
+    if (chk.base[it.id] === undefined) chk.base[it.id] = it.qty;
+    if (v === chk.base[it.id]) { delete chk.now[it.id]; delete chk.base[it.id]; delete chk.why[it.id]; }
+    else chk.now[it.id] = v;
+    saveChk(); K.render();
+  }
+  function setExp(it, act) {
+    if (chk.exp[it.id] === act) { delete chk.exp[it.id]; delete chk.base[it.id]; }
+    else { chk.exp[it.id] = act; chk.base[it.id] = chk.base[it.id] === undefined ? it.qty : chk.base[it.id]; delete chk.now[it.id]; delete chk.why[it.id]; }
+    saveChk(); K.render();
+  }
+
+  function rowSub(it) {
+    return it.catTh + (it.left !== null && it.loc !== 'Storage' && it.loc !== 'Freezer' ? ' · ' + K.leftText(it.left, it.exp) : '');
+  }
+
+  /** One item in a zone: stepper (0 = gone) + หมด, or มี | หมด for มี/หมด items. */
+  function checkRow(it) {
+    const v = cur(it), changed = chk.now[it.id] !== undefined;
+    const word = K.unitWord(it.type, it.unit);
+    const main = el('div', { class: 'main' }, [
+      it.name,
+      el('span', { class: 'sub', text: rowSub(it) }),
+      changed ? el('span', { class: 'was', text: 'เดิม ' + (it.type === 'flag' ? 'มี' : baseOf(it) + ' ' + word) }) : null,
+    ]);
+    let ctl;
+    if (it.type === 'flag') {
+      ctl = el('span', { class: 'toggle2', role: 'group', 'aria-label': it.name }, [
+        el('button', { class: 'yes', type: 'button', 'aria-pressed': String(v > 0), text: 'มี', on: { click: function () { setQty(it, 1); } } }),
+        el('button', { class: 'no', type: 'button', 'aria-pressed': String(v === 0), text: 'หมด', on: { click: function () { setQty(it, 0); } } }),
+      ]);
+    } else {
+      ctl = el('span', { class: 'ctl' }, [
+        K.stepper(v, 0, 999, word, function (n) { setQty(it, n); }, { label: 'จำนวน ' + it.name }).node,
+        ' ',
+        el('button', { class: 'gonebtn', type: 'button', 'aria-pressed': String(v === 0), text: 'หมด',
+          on: { click: function () { setQty(it, v === 0 ? baseOf(it) : 0); } } }),
+      ]);
+    }
+    return el('div', { class: 'row ck' + (v === 0 ? ' gone' : changed ? ' changed' : '') }, [main, ctl]);
+  }
+
+  function expiredRow(it) {
+    const a = chk.exp[it.id];
+    return el('div', { class: 'row ck' + (a === 'toss' ? ' gone' : a === 'keep' ? ' changed' : '') }, [
+      el('div', { class: 'main' }, [it.name + (K.qtyText(it.type, it.qty, it.unit) ? ' ' + K.qtyText(it.type, it.qty, it.unit) : ''),
+        el('span', { class: 'sub', text: K.locTh(it.loc) + ' · ' + K.leftText(it.left, it.exp) })]),
+      el('span', { class: 'toggle2', role: 'group', 'aria-label': it.name }, [
+        el('button', { class: 'no', type: 'button', 'aria-pressed': String(a === 'toss'), text: 'ทิ้ง', on: { click: function () { setExp(it, 'toss'); } } }),
+        el('button', { class: 'yes', type: 'button', 'aria-pressed': String(a === 'keep'), text: 'ยังดีอยู่', on: { click: function () { setExp(it, 'keep'); } } }),
+      ]),
+    ]);
+  }
+
+  function foundRow(f) {
+    return el('div', { class: 'row ck changed' }, [
+      el('div', { class: 'main' }, [f.name, el('span', { class: 'newtag', text: 'ใหม่' }), el('span', { class: 'sub', text: f.qtyText || '' })]),
+      el('button', { class: 'btn small', type: 'button', 'aria-label': 'เอา ' + f.name + ' ออก', text: '✕',
+        on: { click: function () { chk.found = chk.found.filter(function (x) { return x.key !== f.key; }); saveChk(); K.render(); } } }),
+    ]);
+  }
+
+  /* ---- + เจอของที่ไม่ได้จด: pick from the Dictionary, or a new name + its category ---- */
+  function addFound(zone) {
+    K.sheet(function (close) {
+      const input = el('input', { class: 'search', type: 'search', placeholder: 'ชื่อของ เช่น ไข่ แอปเปิ้ล', 'aria-label': 'ชื่อของ' });
+      const box = el('div', { class: 'list' });
+      const draw = function () {
+        const q = input.value.trim(), ql = q.toLowerCase();
+        const list = K.S.dict.filter(function (d) { return !ql || d.name.toLowerCase().indexOf(ql) >= 0 || d.aliases.toLowerCase().indexOf(ql) >= 0; }).slice(0, 40);
+        const rows = list.map(function (d) {
+          return el('button', { class: 'row', type: 'button', on: { click: function () { close(); foundQty(zone, d, null); } } }, [
+            el('div', { class: 'main' }, [d.name, el('span', { class: 'sub', text: K.catTh(d.cat) })]),
+          ]);
+        });
+        const exact = K.S.dict.some(function (d) { return d.name.toLowerCase() === ql; });
+        if (q && !exact) rows.unshift(el('button', { class: 'row', type: 'button', on: { click: function () { close(); foundCategory(zone, q.slice(0, 40)); } } }, [
+          el('div', { class: 'main' }, ['+ "' + q.slice(0, 40) + '" เป็นของใหม่', el('span', { class: 'sub', text: 'เลือกประเภทต่อ (ครั้งหน้าจะจำได้)' })]),
+        ]));
+        box.replaceChildren.apply(box, rows.length ? rows : [el('div', { class: 'empty', text: 'พิมพ์ชื่อของที่เจอ' })]);
+      };
+      input.addEventListener('input', draw);
+      draw();
+      return [el('h3', { text: 'เจออะไรใน' + K.locTh(zone) + '?' }), input, box];
     });
-    if (!S.items.length) wrap.appendChild(el('div', { class: 'list empty', text: 'ไม่มีของในบ้านเลย' }));
+  }
+  function foundCategory(zone, name) {
+    K.sheet(function (close) {
+      return [el('h3', { text: '"' + name + '" คืออะไร?' }), el('div', { class: 'list' }, (K.S.meta.cats || []).map(function (c) {
+        return el('button', { class: 'row', type: 'button', on: { click: function () { close(); foundQty(zone, null, { name: name, cat: c.id }); } } }, [
+          el('div', { class: 'main', text: (c.icon || '') + ' ' + c.th }),
+        ]);
+      }))];
+    });
+  }
+  function foundQty(zone, d, fresh) {
+    const name = d ? d.name : fresh.name, type = d ? d.type : 'piece', unit = d ? d.unit : '';
+    const word = K.unitWord(type, unit);
+    const add = function (n) {
+      chk = chk || newDraft();
+      chk.found.push({ key: K.newReqId().slice(0, 10), name: name, qty: n, zone: zone, cat: fresh ? fresh.cat : undefined,
+        qtyText: type === 'flag' ? K.locTh(zone) : n + ' ' + word + ' · ' + K.locTh(zone) });
+      saveChk(); K.render();
+    };
+    if (type === 'flag') return add(1);
+    K.sheet(function (close) {
+      const st = K.stepper(d && d.defQty > 0 ? d.defQty : 1, 1, 999, word);
+      return [
+        el('h3', { text: name + ' กี่' + word + '?' }), el('div', { class: 'sub', text: K.locTh(zone) }),
+        el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน' }), st.node]),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { const n = st.get(); close(); add(n); } } }),
+        ]),
+      ];
+    });
+  }
+
+  /* ---- the page ---- */
+  function renderStock() {
+    const S = K.S;
+    if (!K.canEdit()) return el('div', {}, [el('p', { class: 'status', text: 'เช็กของได้เฉพาะคนที่แก้ไขได้' })]);
+    chk = chk || newDraft();
+    tidyDraft();
+    const zones = checkZones();
+    const doneN = zones.filter(function (z) { return chk.done[z]; }).length;
+    const n = changeCount();
+    const wrap = el('div');
+    wrap.appendChild(el('div', { class: 'checkhead' }, [
+      el('p', { class: 'big', text: 'แตะเฉพาะของที่ไม่ตรง' }),
+      el('div', { class: 'prog', text: 'เช็กแล้ว ' + doneN + '/' + zones.length + ' โซน' + (n ? ' · แก้ไว้ ' + n + ' รายการ' : '') }),
+    ]));
+    if (chk.pending) wrap.appendChild(el('div', { class: 'banner warn', text: chkSending ? '⏳ กำลังบันทึก…' : '⚠️ ยังไม่ได้บันทึก (สัญญาณอ่อน) กด "ส่งอีกครั้ง" ได้เลย ไม่บันทึกซ้ำ' }));
+
+    const expired = S.items.filter(isExpired).sort(byExpiry);
+    if (expired.length) wrap.appendChild(K.group('⏰ เลยวันหมดอายุแล้ว (' + expired.length + ')', expired.map(expiredRow)));
+
+    zones.forEach(function (zone) {
+      const title = zone === 'other' ? '📍 ที่อื่นๆ' : K.locTh(zone);
+      const list = S.items.filter(function (i) { return inZone(i, zone, zones) && !chk.exp[i.id]; }).sort(byExpiry);
+      const found = chk.found.filter(function (f) { return f.zone === zone; });
+      if (chk.done[zone]) {
+        wrap.appendChild(el('div', { class: 'zonedone' }, [
+          el('span', { text: '✓ ' + title + ' ครบแล้ว' + (list.length ? ' (' + list.length + ')' : '') }),
+          el('button', { class: 'btn small', type: 'button', text: 'เปิดดู', on: { click: function () { delete chk.done[zone]; saveChk(); K.render(); } } }),
+        ]));
+        return;
+      }
+      const rows = list.map(checkRow).concat(found.map(foundRow));
+      if (!rows.length) rows.push(el('div', { class: 'empty', text: 'ไม่มีของ' }));
+      rows.push(el('div', { class: 'zonebtns' }, [
+        zone !== 'other' ? el('button', { class: 'btn', type: 'button', disabled: !!chk.pending, text: '+ เจอของที่ไม่ได้จด', on: { click: function () { addFound(zone); } } }) : null,
+        el('button', { class: 'btn primary', type: 'button', text: 'ครบแล้ว ✓', on: { click: function () { chk.done[zone] = 1; saveChk(); K.render(); } } }),
+      ]));
+      wrap.appendChild(K.group(title + (list.length ? ' (' + list.length + ')' : ''), rows));
+    });
+
+    wrap.appendChild(el('div', { class: 'pad-bottom' }));
+    wrap.appendChild(el('div', { class: 'storebar' }, chk.pending ? [
+      el('button', { class: 'btn primary', type: 'button', disabled: chkSending, text: chkSending ? 'กำลังส่ง…' : 'ส่งอีกครั้ง', on: { click: sendCheck } }),
+    ] : [
+      n ? el('button', { class: 'btn', type: 'button', text: 'ล้างที่แก้', on: { click: function () {
+        K.confirmSheet('ล้างที่แก้ไว้ทั้งหมด?', n + ' รายการ', 'ล้าง', function () { chk = null; saveChk(); K.render(); }, true);
+      } } }) : null,
+      el('button', { class: 'btn primary', type: 'button', text: n ? 'ยืนยัน (' + n + ')' : 'ยืนยัน ทุกอย่างตรง', on: { click: checkSummary } }),
+    ]));
     return wrap;
   }
 
-  K.tab({ id: 'stock', icon: '📋', label: 'เช็กของ', render: renderStock, nav: false, parent: 'fridge' });
+  /* ---- ยืนยัน: only the changes; lower amounts get ใช้ / ทิ้ง / ไม่แน่ใจ ---- */
+  const WHY = [['use', 'ใช้'], ['toss', 'ทิ้ง'], ['unsure', 'ไม่แน่ใจ']];
+  function checkSummary() {
+    const zones = checkZones();
+    const notDone = zones.filter(function (z) { return !chk.done[z]; }).map(function (z) { return z === 'other' ? 'ที่อื่นๆ' : K.locTh(z); });
+    const expT = [], expK = [];
+    Object.keys(chk.exp).forEach(function (id) { const it = itemById(id); if (it) (chk.exp[id] === 'toss' ? expT : expK).push(it.name); });
+    const changes = Object.keys(chk.now).map(itemById).filter(Boolean);
+    K.sheet(function (close) {
+      const nodes = [el('h3', { text: changeCount() ? '📋 สรุปที่แก้' : '📋 ทุกอย่างตรงตามรายการ' })];
+      if (notDone.length) nodes.push(el('div', { class: 'banner warn', text: 'ยังไม่ได้เช็ก: ' + notDone.join(', ') }));
+      const lines = [];
+      if (expT.length) lines.push(el('div', { class: 'sumline', text: '🗑 ทิ้ง (เลยวันหมดอายุ): ' + expT.join(', ') }));
+      if (expK.length) lines.push(el('div', { class: 'sumline', text: '👍 ยังดีอยู่ (ใช้ได้อีก ' + (K.S.meta.keepGoodDays || 2) + ' วัน): ' + expK.join(', ') }));
+      changes.forEach(function (it) {
+        const was = baseOf(it), now = chk.now[it.id], word = K.unitWord(it.type, it.unit);
+        const txt = it.type === 'flag' ? it.name + ' มี → ' + (now ? 'มี' : 'หมด') : it.name + ' ' + was + ' → ' + now + ' ' + word;
+        const line = el('div', { class: 'sumline' }, [el('div', { text: (now < was ? '➖ ' : '➕ ') + txt })]);
+        if (now < was) {
+          if (!chk.why[it.id]) chk.why[it.id] = 'unsure';
+          const btns = WHY.map(function (w) {
+            const b = el('button', { type: 'button', 'aria-pressed': String(chk.why[it.id] === w[0]), text: w[1], on: { click: function () {
+              chk.why[it.id] = w[0]; saveChk();
+              btns.forEach(function (x, i) { x.setAttribute('aria-pressed', String(WHY[i][0] === w[0])); });
+            } } });
+            return b;
+          });
+          line.appendChild(el('div', { class: 'why', role: 'group', 'aria-label': 'หายไปเพราะ' }, btns));
+        }
+        lines.push(line);
+      });
+      chk.found.forEach(function (f) { lines.push(el('div', { class: 'sumline', text: '🆕 ' + f.name + ' ' + (f.qtyText || '') })); });
+      saveChk();
+      nodes.push(lines.length ? el('div', {}, lines) : el('p', { class: 'hint', text: 'ไม่มีอะไรต้องแก้ จะบันทึกว่าเช็กแล้ววันนี้ ✓' }));
+      nodes.push(el('div', { class: 'btns' }, [
+        el('button', { class: 'btn', type: 'button', text: 'กลับไปแก้', on: { click: close } }),
+        el('button', { class: 'btn primary', type: 'button', text: 'บันทึก', on: { click: function () { close(); freezeCheck(); sendCheck(); } } }),
+      ]));
+      return nodes;
+    });
+  }
+
+  /** Freezes the draft into one request (one request ID until the server answers). */
+  function freezeCheck() {
+    const payload = {
+      expired: Object.keys(chk.exp).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], act: chk.exp[id] }; }),
+      changes: Object.keys(chk.now).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], now: chk.now[id], why: chk.why[id] || 'unsure' }; }),
+      found: chk.found.map(function (f) { return { name: f.name, qty: f.qty, zone: f.zone, cat: f.cat }; }),
+      seen: K.S.items.map(function (i) { return i.id; }),
+    };
+    chk.pending = { reqId: K.newReqId(), hh: K.hid, payload: payload };
+    saveChk();
+  }
+
+  async function sendCheck() {
+    if (!chk || !chk.pending || chkSending) return;
+    const c = chk, key = checkKey, hh = c.pending.hh === undefined ? K.hid : c.pending.hh;
+    chkSending = true; K.render();
+    const res = await K.write('stockCheckSave', c.pending.payload, { reqId: c.pending.reqId, quiet: true, force: true, hh: hh, noUndo: true });
+    chkSending = false;
+    const here = c === chk;
+    if (res.ok) {
+      K.store.del(key);
+      if (here) { chk = null; K.go('fridge', true); afterCheck(res.data); }
+    } else if (res.error === 'network' || res.error === 'auth' || res.error === 'server') {
+      K.render();   // keep pending: the same request ID next time
+    } else {
+      c.pending = null; K.store.set(key, c); K.render();   // refused: nothing applied, the draft stays to fix
+    }
+  }
+
+  /** After the save: ran-out items (never tossed ones) → shopping list, then the เลิกทำ bar for the whole check. */
+  function afterCheck(d) {
+    const bar = function () {
+      if (d.skipped && d.skipped.length) K.toast('⚠️ ข้าม (มีคนแก้ไปก่อน): ' + d.skipped.join(', '), true);
+      if (d.undo) K.undoBar(d.undo, d.n ? '📋 บันทึก ' + d.n + ' รายการ' : '📋 เช็กแล้ว ทุกอย่างตรง');
+      else K.toast(d.text || 'บันทึกแล้ว');
+    };
+    if (!d.offer || !d.offer.length) return bar();
+    const tick = {};
+    d.offer.forEach(function (n) { tick[n] = true; });
+    K.sheet(function (close) {
+      return [
+        el('h3', { text: '🛒 หมดแล้ว เพิ่มลงรายการซื้อไหม?' }),
+        el('div', {}, d.offer.map(function (name) {
+          const box = el('input', { type: 'checkbox', checked: true, on: { change: function () { tick[name] = box.checked; } } });
+          return el('label', { class: 'tickline' }, [box, el('span', { text: ' ' + name })]);
+        })),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ไม่ต้อง', on: { click: function () { close(); bar(); } } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'เพิ่มลงรายการ', on: { click: async function () {
+            close();
+            const names = d.offer.filter(function (n) { return tick[n]; });
+            if (names.length) await K.write('checkToList', { names: names, joinBatch: d.undo }, { quiet: true, noUndo: true });
+            bar();
+          } } }),
+        ]),
+      ];
+    }, bar);
+  }
+
+  function checkBanner() {
+    if (!chk || !chk.pending || K.current === 'stock') return null;
+    return el('div', { class: 'banner warn' }, [
+      el('span', { text: '📋 ยังไม่ได้บันทึกการเช็กของ ' }),
+      el('button', { class: 'btn small', type: 'button', text: 'ดู', on: { click: function () { K.go('stock'); } } }),
+    ]);
+  }
+  window.addEventListener('online', function () { if (chk && chk.pending && K.S.me) sendCheck(); });
+
+  K.tab({
+    id: 'stock', icon: '📋', label: 'เช็กของ', render: renderStock, nav: false, parent: 'fridge', banner: checkBanner,
+    afterLoad: function () { if (chk && chk.pending) sendCheck(); },
+    unsaved: function () { return !!chk && !chk.pending && changeCount() > 0; },
+    discard: function () { chk = null; saveChk(); },
+  });
 })();

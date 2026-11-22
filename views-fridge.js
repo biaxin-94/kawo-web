@@ -408,7 +408,7 @@
   let chkSending = false;
   function saveChk() { if (chk) K.store.set(checkKey, chk); else K.store.del(checkKey); }
   K.onHousehold(function () { checkKey = K.hkey('check.v1'); chk = K.store.get(checkKey, null); });
-  function newDraft() { return { base: {}, now: {}, exp: {}, why: {}, found: [], done: {}, pending: null }; }
+  function newDraft() { return { base: {}, now: {}, exp: {}, split: {}, why: {}, found: [], done: {}, pending: null }; }
 
   function checkZones() {
     const z = CHECK_ZONES.filter(K.zoneOn).concat(['Storage']);
@@ -433,8 +433,10 @@
     else chk.now[it.id] = v;
     saveChk(); K.render();
   }
-  function setExp(it, act) {
-    if (chk.exp[it.id] === act) { delete chk.exp[it.id]; delete chk.base[it.id]; }
+  function setExp(it, act, n) {
+    chk.split = chk.split || {};
+    if (act === 'split') chk.split[it.id] = n; else delete chk.split[it.id];
+    if (chk.exp[it.id] === act && act !== 'split') { delete chk.exp[it.id]; delete chk.base[it.id]; }
     else { chk.exp[it.id] = act; chk.base[it.id] = chk.base[it.id] === undefined ? it.qty : chk.base[it.id]; delete chk.now[it.id]; delete chk.why[it.id]; }
     saveChk(); K.render();
   }
@@ -469,16 +471,41 @@
     return el('div', { class: 'row ck' + (v === 0 ? ' gone' : changed ? ' changed' : '') }, [main, ctl]);
   }
 
+  /** v15.0: ชิ้น / ที่ with more than 1 can be split: ทิ้งทั้งหมด · ยังดีอยู่ · แบ่ง (ทิ้ง X จาก N, the rest is still good). */
   function expiredRow(it) {
-    const a = chk.exp[it.id];
-    return el('div', { class: 'row ck' + (a === 'toss' ? ' gone' : a === 'keep' ? ' changed' : '') }, [
+    const a = chk.exp[it.id], canSplit = it.type !== 'flag' && it.qty > 1;
+    const word = K.unitWord(it.type, it.unit), n = (chk.split || {})[it.id];
+    const state = a === 'split' ? 'ทิ้ง ' + n + ' · ยังดีอยู่ ' + (it.qty - n) + ' ' + word : '';
+    const btn = function (cls, act, text, click) {
+      return el('button', { class: cls, type: 'button', 'aria-pressed': String(a === act), text: text, on: { click: click || function () { setExp(it, act); } } });
+    };
+    return el('div', { class: 'row ck' + (a === 'toss' ? ' gone' : a ? ' changed' : '') }, [
       el('div', { class: 'main' }, [it.name + (K.qtyText(it.type, it.qty, it.unit) ? ' ' + K.qtyText(it.type, it.qty, it.unit) : ''),
-        el('span', { class: 'sub', text: K.locTh(it.loc) + ' · ' + K.leftText(it.left, it.exp) })]),
+        el('span', { class: 'sub', text: K.locTh(it.loc) + ' · ' + K.leftText(it.left, it.exp) }),
+        state ? el('span', { class: 'was', text: state }) : null]),
       el('span', { class: 'toggle2', role: 'group', 'aria-label': it.name }, [
-        el('button', { class: 'no', type: 'button', 'aria-pressed': String(a === 'toss'), text: 'ทิ้ง', on: { click: function () { setExp(it, 'toss'); } } }),
-        el('button', { class: 'yes', type: 'button', 'aria-pressed': String(a === 'keep'), text: 'ยังดีอยู่', on: { click: function () { setExp(it, 'keep'); } } }),
+        btn('no', 'toss', canSplit ? 'ทิ้งทั้งหมด' : 'ทิ้ง'),
+        btn('yes', 'keep', 'ยังดีอยู่'),
+        canSplit ? btn('yes', 'split', 'แบ่ง', function () { askSplit(it); }) : null,
       ]),
     ]);
+  }
+  function askSplit(it) {
+    const word = K.unitWord(it.type, it.unit);
+    K.sheet(function (close) {
+      const st = K.stepper((chk.split || {})[it.id] || 1, 1, it.qty, word, null, { label: 'จำนวนที่ทิ้ง' });
+      return [
+        el('h3', { text: 'แบ่ง ' + it.name }),
+        el('div', { class: 'sub', text: 'ที่เหลือยังดีอยู่ ใช้ได้อีก ' + (K.S.meta.keepGoodDays || 2) + ' วัน' }),
+        el('div', { class: 'amount' }, [el('span', { text: 'ทิ้ง' }), st.node, el('span', { text: 'จาก ' + it.qty })]),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () {
+            const n = st.get(); close(); setExp(it, n >= it.qty ? 'toss' : 'split', n);
+          } } }),
+        ]),
+      ];
+    });
   }
 
   function foundRow(f) {
@@ -601,14 +628,20 @@
   function checkSummary() {
     const zones = checkZones();
     const notDone = zones.filter(function (z) { return !chk.done[z]; }).map(function (z) { return z === 'other' ? 'ที่อื่นๆ' : K.locTh(z); });
-    const expT = [], expK = [];
-    Object.keys(chk.exp).forEach(function (id) { const it = itemById(id); if (it) (chk.exp[id] === 'toss' ? expT : expK).push(it.name); });
+    const expT = [], expK = [], expS = [];
+    Object.keys(chk.exp).forEach(function (id) {
+      const it = itemById(id);
+      if (!it) return;
+      if (chk.exp[id] === 'split') { const n = chk.split[id]; expS.push(it.name + ': ทิ้ง ' + n + ', ยังดีอยู่ ' + (it.qty - n)); }
+      else (chk.exp[id] === 'toss' ? expT : expK).push(it.name);
+    });
     const changes = Object.keys(chk.now).map(itemById).filter(Boolean);
     K.sheet(function (close) {
       const nodes = [el('h3', { text: changeCount() ? '📋 สรุปที่แก้' : '📋 ทุกอย่างตรงตามรายการ' })];
       if (notDone.length) nodes.push(el('div', { class: 'banner warn', text: 'ยังไม่ได้เช็ก: ' + notDone.join(', ') }));
       const lines = [];
       if (expT.length) lines.push(el('div', { class: 'sumline', text: '🗑 ทิ้ง (เลยวันหมดอายุ): ' + expT.join(', ') }));
+      expS.forEach(function (t) { lines.push(el('div', { class: 'sumline', text: '✂️ ' + t })); });
       if (expK.length) lines.push(el('div', { class: 'sumline', text: '👍 ยังดีอยู่ (ใช้ได้อีก ' + (K.S.meta.keepGoodDays || 2) + ' วัน): ' + expK.join(', ') }));
       changes.forEach(function (it) {
         const was = baseOf(it), now = chk.now[it.id], word = K.unitWord(it.type, it.unit);
@@ -641,7 +674,7 @@
   /** Freezes the draft into one request (one request ID until the server answers). */
   function freezeCheck() {
     const payload = {
-      expired: Object.keys(chk.exp).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], act: chk.exp[id] }; }),
+      expired: Object.keys(chk.exp).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], act: chk.exp[id], toss: chk.exp[id] === 'split' ? chk.split[id] : undefined }; }),
       changes: Object.keys(chk.now).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], now: chk.now[id], why: chk.why[id] || 'unsure' }; }),
       found: chk.found.map(function (f) { return { name: f.name, qty: f.qty, zone: f.zone, cat: f.cat }; }),
       seen: K.S.items.map(function (i) { return i.id; }),

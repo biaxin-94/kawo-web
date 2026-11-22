@@ -13,6 +13,39 @@
     return { cls: '', text: K.thDate(c.due) };
   }
 
+  /**
+   * v17.0: ✅ ทำแล้ว asks "ทำโดย": every household member (viewers too, e.g. แม่), the person tapping preselected.
+   * Someone other than the assigned person did it -> the server keeps the turn with the assigned person.
+   */
+  function whoDid(c) {
+    const people = (K.S.members || []).slice();
+    if (!people.length) { K.write('choreDone', { row: c.row, task: c.task }); return; }
+    let pick = (people.filter(function (m) { return m.me; })[0] || people[0]).key;
+    K.sheet(function (close) {
+      const rows = people.map(function (m) {
+        const b = el('button', { class: 'row whopick', type: 'button', role: 'radio', 'aria-checked': String(m.key === pick), on: { click: function () {
+          pick = m.key;
+          rows.forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); });
+        } } }, [el('span', { class: 'radio', 'aria-hidden': 'true' }), el('div', { class: 'main' }, [(m.callName || m.name) + (m.me ? ' (ฉัน)' : ''),
+          m.callName && m.callName !== m.name ? el('span', { class: 'sub', text: m.name }) : null])]);
+        return b;
+      });
+      return [
+        el('h3', { text: '✅ ' + c.task + ' · ทำโดย' }),
+        el('div', { class: 'sub', text: 'ถึงคิว ' + c.owner + (c.ownerRule === 'Alternate' ? ' · ถ้าคนอื่นทำแทน รอบหน้ายังเป็นของ ' + c.owner : '') }),
+        el('div', { class: 'list', role: 'radiogroup', 'aria-label': 'ทำโดย' }, rows),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'บันทึก', on: { click: function () {
+            close();
+            const me = people.filter(function (m) { return m.me; })[0];
+            K.write('choreDone', me && me.key === pick ? { row: c.row, task: c.task } : { row: c.row, task: c.task, doer: pick });
+          } } }),
+        ]),
+      ];
+    });
+  }
+
   function choreRow(c) {
     const can = K.canEdit(), w = choreWhen(c), due = c.left <= 0;
     const doneToday = c.lastDone === K.S.meta.today;
@@ -20,7 +53,7 @@
       el('div', { class: 'main' }, [c.task, el('span', { class: 'sub', text: '👤 ' + c.owner + ' · ทุก ' + c.every + ' วัน' + (c.lastDone ? ' · ล่าสุด ' + K.thDate(c.lastDone) + (c.lastBy ? ' (' + c.lastBy + ')' : '') : '') })]),
       el('div', { class: 'end', text: w.text }),
       el('button', { class: 'pill ok', type: 'button', disabled: !can || doneToday, text: doneToday ? '✓ แล้ว' : '✅ ทำแล้ว',
-        on: { click: function () { K.write('choreDone', { row: c.row, task: c.task }); } } }),
+        on: { click: function () { whoDid(c); } } }),
       due ? el('button', { class: 'pill', type: 'button', disabled: !can, text: '💤', 'aria-label': 'เลื่อน ' + c.task + ' ไปพรุ่งนี้',
         on: { click: function () { K.write('choreSnooze', { row: c.row, task: c.task }); } } }) : null,
     ]);

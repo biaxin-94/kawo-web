@@ -11,7 +11,7 @@
     { id: 'stats', label: '📊 สถิติ', hidden: true },   // the stats dashboard will live here
   ];
   const ACTION_TH = { add: 'เพิ่ม', shopping_confirm: 'ซื้อเข้าตู้', use: 'ใช้', toss: 'ทิ้ง', move: 'ย้าย',
-    stock_check_remove: 'หมดแล้ว (เช็กของ)', stock_check_add: 'เจอเพิ่ม (เช็กของ)', expiry_extend: 'ยังดีอยู่ (ต่อวันหมด)',
+    stock_check_remove: 'หมดแล้ว (เช็กของ)', stock_check_add: 'เจอเพิ่ม (เช็กของ)', expiry_extend: 'ยังดีอยู่ (ต่อวันหมด)', chore_done: 'ทำงานบ้าน',
     undo: 'เลิกทำ', mixed: 'ทำรายการ' };
   let section = 'history';
   let H = null;            // {days, next, members, items, actions}
@@ -44,7 +44,14 @@
     return i.item + q + (i.to && i.from && i.to !== i.from ? ' → ' + K.locTh(i.to) : '');
   }
 
+  /** v17.0: call names on chore lines ("พี่หมีล้างจาน (อาเด๊ะบันทึก)"). */
+  function callOf(name) { const m = (K.S.members || []).filter(function (x) { return x.name === name; })[0]; return (m && m.callName) || name; }
+
   function groupLine(g) {
+    if (g.action === 'chore_done') {
+      const i = g.items[0] || {};
+      return callOf(g.who) + i.item + (i.detail ? ' (' + callOf(i.detail) + 'บันทึก)' : '');
+    }
     const items = g.items.map(itemText).join(', ');
     if (g.recipe) return g.who + ' ทำ' + g.recipe + ': ' + items;
     if (g.batch && g.action === 'shopping_confirm') return g.who + ' ซื้อของเข้าตู้: ' + items;

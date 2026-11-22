@@ -17,6 +17,7 @@
     const q = K.qtyText(it.type, it.qty, it.unit);
     return el('div', { class: 'main' }, [
       it.name, q ? el('span', { class: 'qty', text: q }) : null,
+      it.unknownBuy ? el('span', { class: 'unk', text: 'ไม่ทราบวันซื้อ' }) : null,   // v19.0: first fill, until a stock check
       el('span', { class: 'sub', text: it.catTh + (it.type === 'flag' ? ' · มี' : '') }),
     ]);
   }
@@ -439,11 +440,14 @@
     // v17.0: 1. actions (cards that open other flows), 2. last check, 3. the find group (filters), 4. the list.
     // Viewers get no เช็กของ / 🍳 (the server refuses their writes anyway); ของใช้ only has เช็กของ.
     const acts = [];
-    if (K.canEdit()) acts.push(actionCard('✅', 'เช็กของ', 'เช็กว่าของในตู้ตรงไหม', function () { K.go('stock'); }));
+    // v19.0: an empty household starts with เริ่มต้นตู้ instead (a stock check only checks what is already there)
+    const empty = !S.items.length;
+    if (K.canEdit() && empty) acts.push(actionCard('✨', 'เริ่มต้นตู้', 'เปิดตู้แล้วกดเลือกของที่มี', function () { K.go('setup'); }));
+    else if (K.canEdit()) acts.push(actionCard('✅', 'เช็กของ', 'เช็กว่าของในตู้ตรงไหม', function () { K.go('stock'); }));
     if (part !== 'storage' && K.canEdit() && S.items.length) acts.push(actionCard('🍳', 'ใช้ทำกับข้าว', 'บันทึกของที่ใช้', function () { startCook(); }));
     if (part !== 'storage') acts.push(actionCard('💡', 'ทำอะไรกินดี', 'เมนูจากของที่มี', function () { K.go('cook'); }));
     if (acts.length) wrap.appendChild(el('div', { class: 'actcards n' + acts.length }, acts));
-    const lc = lastCheckLine();
+    const lc = empty ? null : lastCheckLine();
     if (lc) wrap.appendChild(lc);
     const zones = foodZones();
     wrap.appendChild(el('div', { class: 'findgroup', role: 'search' }, [

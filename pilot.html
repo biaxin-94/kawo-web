@@ -90,7 +90,7 @@
 
         <!-- Avatar of "กะวอ" (Self-Contained Watercolor-Style Inline SVG matching uploaded portrait) -->
         <div class="relative z-10 mt-4 mb-2.5 flex justify-center">
-          <div class="relative w-36 h-36 rounded-full bg-[#FAF6F1] p-1 border-2 border-terracotta-border/80 ring-4 ring-white shadow-soft overflow-hidden">
+          <div class="relative w-36 h-36 rounded-full bg-[#FAF6F1] p-1 border-2 border-terracotta-border/80 ring-4 ring-white shadow-soft overflow-hidden" data-avatar="big">
             <svg viewBox="0 0 240 240" class="w-full h-full rounded-full" role="img" aria-label="กะวอ ผู้ช่วยประจำบ้าน">
               <defs>
                 <!-- Soft Watercolor Gradients -->
@@ -545,7 +545,7 @@
             <!-- Bubble 2: กะวอ (Preventing Duplicate Buying) -->
             <div class="flex items-start gap-2">
               <!-- Mini Inline SVG Avatar of กะวอ -->
-              <div class="shrink-0 w-9 h-9 rounded-full bg-[#FAF6F1] border border-white shadow-sm overflow-hidden mt-0.5">
+              <div class="shrink-0 w-9 h-9 rounded-full bg-[#FAF6F1] border border-white shadow-sm overflow-hidden mt-0.5" data-avatar="mini">
                 <svg viewBox="0 0 120 120" class="w-full h-full rounded-full" aria-hidden="true">
                   <circle cx="60" cy="60" r="60" fill="#F8F3EB" />
                   <!-- Dusty-Rose Hijab -->
@@ -599,7 +599,7 @@
             <!-- Bubble 4: กะวอ (Cook suggestion using expiring items) -->
             <div class="flex items-start gap-2">
               <!-- Mini Inline SVG Avatar of กะวอ -->
-              <div class="shrink-0 w-9 h-9 rounded-full bg-[#FAF6F1] border border-white shadow-sm overflow-hidden mt-0.5">
+              <div class="shrink-0 w-9 h-9 rounded-full bg-[#FAF6F1] border border-white shadow-sm overflow-hidden mt-0.5" data-avatar="mini">
                 <svg viewBox="0 0 120 120" class="w-full h-full rounded-full" aria-hidden="true">
                   <circle cx="60" cy="60" r="60" fill="#F8F3EB" />
                   <!-- Dusty-Rose Hijab -->
@@ -1281,7 +1281,8 @@
   </script>
 
   <!-- v13.0: one page for both personas. Default พี่เพ็ญ (the pilot OA); pilot.html?p=kawo keeps กะวอ.
-       Only the name changes here; the avatar and chat examples are กะวอ's drawing and voice. -->
+       The name changes, and the avatars become her picture (personas/penn.jpg); if the picture can't load, กะวอ's
+       drawing stays. The chat examples keep กะวอ's wording. -->
   <script>
     (function () {
       try {
@@ -1296,6 +1297,17 @@
           ['aria-label', 'title', 'alt'].forEach(function (a) { var v = el.getAttribute(a); if (v && v.indexOf('กะวอ') >= 0) el.setAttribute(a, swap(v)); });
         });
         document.title = swap(document.title);
+        // her picture in every avatar spot (big one at the top, small ones next to the chat bubbles)
+        var pic = new Image();
+        pic.onload = function () {
+          document.querySelectorAll('[data-avatar]').forEach(function (box) {
+            var img = document.createElement('img');
+            img.src = pic.src; img.alt = box.getAttribute('data-avatar') === 'big' ? 'พี่เพ็ญ ผู้ช่วยประจำบ้าน' : '';
+            img.className = 'w-full h-full rounded-full object-cover';
+            box.replaceChildren(img);
+          });
+        };
+        pic.src = 'personas/penn.jpg';
       } catch (e) { /* the page still works with the original name */ }
     })();
   </script>

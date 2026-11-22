@@ -78,11 +78,14 @@
   };
   /**
    * v15.0: freshness bar class for an item card: fresh (> FRESH_SOON_DAYS left), soon (0..2 days), late (expired),
-   * nodate (ตู้เก็บของ, or no date).
+   * nodate (ตู้กับข้าว / ของใช้, or no date).
    */
   const FRESH_SOON_DAYS = 2;
+  /** v16.0: zones without dates (ตู้กับข้าว, ของใช้): neutral bar, never "expiring". */
+  K.NO_EXPIRY_ZONES = ['Kitchen', 'Storage'];
+  K.noExp = function (loc) { return K.NO_EXPIRY_ZONES.indexOf(loc) >= 0; };
   K.fresh = function (it) {
-    if (!it || it.loc === 'Storage' || it.left === null || it.left === undefined) return 'nodate';
+    if (!it || K.noExp(it.loc) || it.left === null || it.left === undefined) return 'nodate';
     if (it.left < 0) return 'late';
     return it.left <= FRESH_SOON_DAYS && it.loc !== 'Freezer' ? 'soon' : 'fresh';
   };
@@ -103,7 +106,7 @@
   };
 
   /* ---------------- households (v11.0) ---------------- */
-  const HH_KEYS = ['shop.v1', 'cook.v1', 'check.v1', 'freezeDismissed'];   // phone storage that belongs to one household
+  const HH_KEYS = ['shop.v1', 'cook.v1', 'check.v1', 'freezeDismissed', 'fold.v1', 'chip.v1'];   // phone storage that belongs to one household
   const hhHooks = [];
   /** Storage key for this household's data ('kawo.<hid>.<base>'; no household = the pre-v11 key). */
   K.hkey = function (base, hid) { hid = hid === undefined ? K.hid : hid; return hid ? 'kawo.' + hid + '.' + base : 'kawo.' + base; };
@@ -447,6 +450,8 @@
     } else {
       K.$('view').replaceChildren(page);
     }
+    const topBar = document.querySelector('.top');   // v16.0: pinned zone headers sit just under it
+    if (topBar) document.documentElement.style.setProperty('--top-h', topBar.offsetHeight + 'px');
     K.$('foot').textContent = (CFG.ENV === 'dev' ? 'DEV · ' : '') + 'ข้อมูลวันที่ ' + K.thDate(K.S.meta.today) + ' · หน้าเว็บ v' + APP_VERSION + ' · ระบบ v' + K.S.version;
   };
 

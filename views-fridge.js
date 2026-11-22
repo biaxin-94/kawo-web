@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const K = window.KAWO, el = K.el;
-  const FRIDGE_LOCS = ['Fridge', 'Chill', 'Freezer', 'Pantry'];
+  const FRIDGE_LOCS = ['Fridge', 'Chill', 'Freezer', 'Pantry', 'Kitchen'];   // v16.0: ของกิน zones, in this order (ตู้กับข้าว last)
   let part = 'fridge';                       // fridge | storage
   let dismissed = K.store.get(K.hkey('freezeDismissed'), {});   // v11.0: per household
 
@@ -42,7 +42,7 @@
         el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { const k = n(); close(); doAct(it, 'toss', null, k); } } }),
       ]));
       const toChill = it.loc !== 'Chill' && K.zoneOn('Chill'), toFreezer = K.zoneOn('Freezer');   // v11.0: zones this household uses
-      if (it.loc !== 'Storage' && it.loc !== 'Freezer' && (toChill || toFreezer)) {
+      if (!K.noExp(it.loc) && it.loc !== 'Freezer' && (toChill || toFreezer)) {
         const mv = function (dest) { close(); askMove(it, dest); };
         nodes.push(el('div', { class: 'btns' }, [
           toChill ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '🌡️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
@@ -161,7 +161,7 @@
       right = K.stepper(Math.min(cook.sel[it.id], it.qty), 1, it.qty, K.unitWord(it.type, it.unit), function (v) { cook.sel[it.id] = v; saveCook(); },
         { onUnder: function () { delete cook.sel[it.id]; saveCook(); K.render(); } }).node;
     } else if (on) right = el('span', { class: 'end', text: cook.sel[it.id] + ' ' + K.unitWord(it.type, it.unit) });
-    const where = K.locTh(it.loc) + (it.left !== null && it.loc !== 'Freezer' && it.loc !== 'Storage' ? ' · ' + K.leftText(it.left, it.exp) : '') + (isOpt ? ' · ของเสริม' : '');
+    const where = K.locTh(it.loc) + (it.left !== null && it.loc !== 'Freezer' && !K.noExp(it.loc) ? ' · ' + K.leftText(it.left, it.exp) : '') + (isOpt ? ' · ของเสริม' : '');
     return el('div', { class: 'row ' + K.fresh(it) + (on ? ' picked' : '') }, [
       el('button', { class: 'check', type: 'button', disabled: !!cook.pending, 'aria-pressed': String(on), 'aria-label': 'ใช้ ' + it.name, text: on ? '✓' : '', on: { click: toggle } }),
       el('div', { class: 'main', on: { click: toggle } }, [
@@ -186,7 +186,7 @@
       mine.forEach(function (i) { shown[i.id] = true; });
       if (mine.length) wrap.appendChild(K.group('ของในเมนูนี้', mine.map(function (i) { return cookRow(i, cook.opt.indexOf(i.id) >= 0); })));
     }
-    FRIDGE_LOCS.concat(['Storage', 'other']).forEach(function (loc) {
+    FRIDGE_LOCS.concat(['Storage', 'other']).forEach(function (loc) {   // v16.0: includes ตู้กับข้าว
       const list = K.S.items.filter(function (i) {
         if (shown[i.id]) return false;
         return loc === 'other' ? FRIDGE_LOCS.indexOf(i.loc) < 0 && i.loc !== 'Storage' : i.loc === loc;
@@ -307,14 +307,45 @@
   }
   window.addEventListener('online', function () { if (cook && cook.pending && K.S.me) sendCook(); });
 
-  /* ---------------- ตู้เย็น tab ---------------- */
+  /* ---------------- ของกิน / ของใช้ tab (v16.0; was ตู้เย็น / ตู้เก็บของ) ---------------- */
+  /*
+   * ของกิน = every food zone as a section (ตู้เย็น, Chill, ฟรีซ, นอกตู้, ตู้กับข้าว: only zones that are on), ของใช้ = household
+   * items by category. Each section header is pinned while scrolling through it and folds on tap (remembered per
+   * household on the phone, key fold.v1). Items keep the same tap -> ✅ / 🗑 / ❄️ sheet.
+   */
+  let folds = K.store.get(K.hkey('fold.v1'), {});
+  K.onHousehold(function () { folds = K.store.get(K.hkey('fold.v1'), {}); });
+  function foodZones() { return FRIDGE_LOCS.filter(function (z) { return z === 'Fridge' || z === 'Kitchen' || K.zoneOn(z); }); }
+  function isFood(i) { return i.loc !== 'Storage'; }
+
+  function itemCard(i) {
+    return el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, on: { click: function () { openItem(i); } } }, [
+      itemLine(i, true), K.noExp(i.loc) ? null : el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
+    ]);
+  }
+
+  /** A section: pinned header "🧊 ตู้เย็น (12)" that folds, a light zone tint behind the cards. */
+  function zoneSection(key, title, n, tint, cards) {
+    const shut = !!folds[key];
+    const sec = el('section', { class: 'zone' + (tint ? ' tint-' + tint : '') + (shut ? ' shut' : ''), 'data-key': key }, [
+      el('button', { class: 'zonehead', type: 'button', 'aria-expanded': String(!shut), on: { click: function () {
+        if (folds[key]) delete folds[key]; else folds[key] = 1;
+        K.store.set(K.hkey('fold.v1'), folds);
+        sec.classList.toggle('shut', !!folds[key]);
+        this.setAttribute('aria-expanded', String(!folds[key]));
+      } } }, [el('span', { class: 'zt', text: title }), el('span', { class: 'zn', text: '(' + n + ')' }), el('span', { class: 'chev', 'aria-hidden': 'true', text: '▾' })]),
+      el('div', { class: 'list' }, cards.length ? cards : [el('div', { class: 'empty', text: 'ไม่มีของ' })]),
+    ]);
+    return sec;
+  }
+
   function renderFridge() {
     if (cook && (K.canEdit() || cook.pending)) return renderCook();
     const S = K.S, days = S.meta.alertDays;
     const wrap = el('div');
     wrap.appendChild(el('div', { class: 'seg', role: 'group' }, [
-      el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🧊 ตู้เย็น', on: { click: function () { part = 'fridge'; K.render(); } } }),
-      el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '📦 ตู้เก็บของ', on: { click: function () { part = 'storage'; K.render(); } } }),
+      el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🥢 ของกิน', on: { click: function () { part = 'fridge'; K.render(); } } }),
+      el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '🧴 ของใช้', on: { click: function () { part = 'storage'; K.render(); } } }),
     ]));
     // v12.0: เช็กของ, 🍳 ใช้ทำกับข้าว and ทำอะไรกินดี open from here (they used to be tabs / a button).
     // Viewers don't get 🍳 at all (the server refuses their writes anyway); the other two are read-only for them.
@@ -327,22 +358,20 @@
     ]));
 
     if (part === 'storage') {
-      const items = S.items.filter(function (i) { return i.loc === 'Storage'; }).sort(function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); });
+      const items = S.items.filter(function (i) { return !isFood(i); }).sort(function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); });
       wrap.appendChild(el('div', { class: 'summary' }, [el('span', { text: 'ทั้งหมด ' + items.length + ' รายการ' })]));
-      if (!items.length) wrap.appendChild(el('div', { class: 'list empty', text: 'ตู้เก็บของว่าง' }));
+      if (!items.length) wrap.appendChild(el('div', { class: 'list empty', text: 'ยังไม่มีของใช้' }));
       const cats = [];
       items.forEach(function (i) { if (cats.indexOf(i.catTh) < 0) cats.push(i.catTh); });
       cats.forEach(function (c) {
         const list = items.filter(function (i) { return i.catTh === c; });
-        wrap.appendChild(K.group(c + ' (' + list.length + ')', list.map(function (i) {
-          return el('button', { class: 'row nodate', type: 'button', on: { click: function () { openItem(i); } } }, [itemLine(i, false)]);
-        })));
+        wrap.appendChild(zoneSection('cat:' + c, c, list.length, '', list.map(itemCard)));
       });
       return wrap;
     }
 
     activeHints().forEach(function (h) { wrap.appendChild(freezeCard(h)); });
-    const items = S.items.filter(function (i) { return i.loc !== 'Storage'; });
+    const items = S.items.filter(isFood);
     const late = items.filter(function (i) { return i.loc !== 'Freezer' && i.left !== null && i.left < 0; }).length;
     const soon = items.filter(function (i) { return i.loc !== 'Freezer' && i.left !== null && i.left >= 0 && i.left <= days; }).length;
     wrap.appendChild(el('div', { class: 'summary' }, [
@@ -350,26 +379,22 @@
       late ? el('span', { class: 'bad', text: 'เลยกำหนด ' + late }) : null,
       soon ? el('span', { class: 'warn', text: 'ใช้ภายใน ' + days + ' วัน ' + soon }) : null,
     ]));
-    FRIDGE_LOCS.concat(['other']).forEach(function (loc) {
-      const list = items.filter(function (i) { return loc === 'other' ? FRIDGE_LOCS.indexOf(i.loc) < 0 : i.loc === loc; }).sort(byExpiry);
+    const zones = foodZones();
+    zones.concat(['other']).forEach(function (loc) {
+      const list = items.filter(function (i) { return loc === 'other' ? zones.indexOf(i.loc) < 0 : i.loc === loc; })
+        .sort(K.noExp(loc) ? function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); } : byExpiry);
       if (!list.length && loc === 'other') return;
-      wrap.appendChild(K.group((loc === 'other' ? '📍 ที่อื่นๆ' : K.locTh(loc)) + (list.length ? ' (' + list.length + ')' : ''), list.length
-        ? list.map(function (i) {
-          return el('button', { class: 'row ' + K.fresh(i), type: 'button', on: { click: function () { openItem(i); } } }, [
-            itemLine(i, true), el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
-          ]);
-        })
-        : [el('div', { class: 'empty', text: 'ไม่มีของ' })]));
+      wrap.appendChild(zoneSection(loc, loc === 'other' ? '📍 ที่อื่นๆ' : K.locTh(loc), list.length, loc === 'other' ? '' : loc.toLowerCase(), list.map(itemCard)));
     });
-    wrap.appendChild(el('p', { class: 'hint', text: 'แตะที่รายการเพื่อ ✅ ใช้ / 🗑 ทิ้ง / ❄️ ย้าย' }));
+    wrap.appendChild(el('p', { class: 'hint', text: 'แตะที่รายการเพื่อ ✅ ใช้ / 🗑 ทิ้ง / ❄️ ย้าย · แตะหัวข้อเพื่อพับเก็บ' }));
     return wrap;
   }
 
   K.tab({
-    id: 'fridge', icon: '🧊', label: 'ตู้เย็น', render: renderFridge, banner: cookBanner,
+    id: 'fridge', icon: '🥢', label: 'ของกิน', render: renderFridge, banner: cookBanner,
     afterLoad: function () { if (cook && cook.pending) sendCook(); },   // reopened with an unsent batch: send it now
-    badge: function () { return K.S.items.filter(function (i) { return i.loc !== 'Freezer' && i.loc !== 'Storage' && i.left !== null && i.left <= K.S.meta.alertDays; }).length; },
-    urgent: function () { return K.S.items.some(function (i) { return i.loc !== 'Storage' && i.left !== null && i.left <= 0; }); },   // expired or expires today
+    badge: function () { return K.S.items.filter(function (i) { return i.loc !== 'Freezer' && !K.noExp(i.loc) && i.left !== null && i.left <= K.S.meta.alertDays; }).length; },
+    urgent: function () { return K.S.items.some(function (i) { return !K.noExp(i.loc) && i.left !== null && i.left <= 0; }); },   // expired or expires today
   });
 
   /* ---------------- last stock check line (ตู้เย็น landing, v14.0) ---------------- */
@@ -402,7 +427,7 @@
    *          found: [{key, name, qty, zone, cat?, unit}], done: {zone: 1}, pending: {reqId, hh, payload} | null}
    * Zone progress (done) is phone-only. The server checks every "was" quantity and skips items someone changed.
    */
-  const CHECK_ZONES = ['Chill', 'Fridge', 'Freezer', 'Pantry'];   // the order people open things; ตู้เก็บของ last
+  const CHECK_ZONES = ['Chill', 'Fridge', 'Freezer', 'Pantry', 'Kitchen'];   // the order people open things; ของใช้ last (v16.0)
   let checkKey = K.hkey('check.v1');
   let chk = K.store.get(checkKey, null);
   let chkSending = false;
@@ -411,12 +436,12 @@
   function newDraft() { return { base: {}, now: {}, exp: {}, split: {}, why: {}, found: [], done: {}, pending: null }; }
 
   function checkZones() {
-    const z = CHECK_ZONES.filter(K.zoneOn).concat(['Storage']);
+    const z = CHECK_ZONES.filter(function (x) { return x === 'Kitchen' || K.zoneOn(x); }).concat(['Storage']);
     if (K.S.items.some(function (i) { return z.indexOf(i.loc) < 0; })) z.push('other');
     return z;
   }
   function inZone(i, zone, zones) { return zone === 'other' ? zones.indexOf(i.loc) < 0 : i.loc === zone; }
-  function isExpired(i) { return i.loc !== 'Storage' && i.left !== null && i.left !== undefined && i.left < 0; }
+  function isExpired(i) { return !K.noExp(i.loc) && i.left !== null && i.left !== undefined && i.left < 0; }
   function cur(it) { return chk.now[it.id] !== undefined ? chk.now[it.id] : it.qty; }
   function baseOf(it) { return chk.base[it.id] !== undefined ? chk.base[it.id] : it.qty; }
   function changeCount() { return chk ? Object.keys(chk.now).length + Object.keys(chk.exp).length + chk.found.length : 0; }
@@ -442,7 +467,7 @@
   }
 
   function rowSub(it) {
-    return it.catTh + (it.left !== null && it.loc !== 'Storage' && it.loc !== 'Freezer' ? ' · ' + K.leftText(it.left, it.exp) : '');
+    return it.catTh + (it.left !== null && !K.noExp(it.loc) && it.loc !== 'Freezer' ? ' · ' + K.leftText(it.left, it.exp) : '');
   }
 
   /** One item in a zone: stepper (0 = gone) + หมด, or มี | หมด for มี/หมด items. */

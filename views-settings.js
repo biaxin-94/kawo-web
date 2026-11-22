@@ -308,16 +308,16 @@
       return el('label', { class: 'toggle' }, [el('span', { text: (l ? l.icon + ' ' + l.th : id) }), cb]);
     });
     wrap.appendChild(K.group('ช่องเก็บของที่บ้านนี้มี', zoneRows.concat([
-      el('p', { class: 'hint', text: 'ตู้เย็นและตู้เก็บของมีเสมอ · ปิดช่องไหน ของใหม่จะไปตู้เย็นแทน (ของที่อยู่แล้วไม่ย้าย)' }),
+      el('p', { class: 'hint', text: 'ตู้เย็น ตู้กับข้าว และของใช้มีเสมอ · ปิดช่องไหน ของใหม่จะไปตู้เย็นแทน (ของที่อยู่แล้วไม่ย้าย)' }),
       el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'บันทึกช่องเก็บของ', on: { click: function () {
         K.write('hhSave', { zones: { Chill: zones.Chill.checked, Freezer: zones.Freezer.checked, Pantry: zones.Pantry.checked } });
       } } })]),
     ])));
 
-    // default zone per category (fresh food only: dry food and household items live in ตู้เก็บของ)
+    // default zone per category (fresh food only: dry food lives in ตู้กับข้าว, household items in ของใช้)
     const sel = {};
     const catRows = meta.cats.filter(function (c) { return !c.storage; }).map(function (c) {
-      const s = select([{ v: '', t: 'ตู้เย็น (ปกติ)' }].concat(meta.locs.filter(function (l) { return l.on !== false && l.id !== 'Fridge' && l.id !== 'Storage'; })
+      const s = select([{ v: '', t: 'ตู้เย็น (ปกติ)' }].concat(meta.locs.filter(function (l) { return l.on !== false && l.id !== 'Fridge' && l.id !== 'Storage' && l.id !== 'Kitchen'; })
         .map(function (l) { return { v: l.id, t: l.icon + ' ' + l.th }; })), (meta.catZones || {})[c.id] || '');
       s.setAttribute('aria-label', c.th);
       sel[c.id] = s;

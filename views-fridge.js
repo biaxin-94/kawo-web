@@ -417,27 +417,37 @@
     return sec;
   }
 
+  /** v17.0: an action that opens another flow: a card (icon, name, one gray line, ›), never a chip. */
+  function actionCard(icon, name, line, go) {
+    return el('button', { class: 'actcard', type: 'button', on: { click: go } }, [
+      el('span', { class: 'ai', 'aria-hidden': 'true', text: icon }),
+      el('span', { class: 'at' }, [el('b', { text: name }), el('span', { text: line })]),
+      el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
+    ]);
+  }
+
   function renderFridge() {
     if (cook && (K.canEdit() || cook.pending)) return renderCook();
     const S = K.S, days = S.meta.alertDays;
     const wrap = el('div');
-    wrap.appendChild(el('div', { class: 'seg', role: 'group' }, [
-      el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🥢 ของกิน', on: { click: function () { part = 'fridge'; K.render(); } } }),
-      el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '🧴 ของใช้', on: { click: function () { part = 'storage'; K.render(); } } }),
-    ]));
-    // v16.0: quick find right at the top (search, then the zone chips on ของกิน)
-    const zones = foodZones();
-    wrap.appendChild(findBox(wrap));
-    if (part !== 'storage') wrap.appendChild(chipRow(zones));
-    wrap.appendChild(el('div', { class: 'banner info findmiss', hidden: true }));
-    // v12.0: เช็กของ, 🍳 ใช้ทำกับข้าว and ทำอะไรกินดี open from here (they used to be tabs / a button).
-    // Viewers don't get 🍳 at all (the server refuses their writes anyway); the other two are read-only for them.
+    // v17.0: 1. actions (cards that open other flows), 2. last check, 3. the find group (filters), 4. the list.
+    // Viewers get no เช็กของ / 🍳 (the server refuses their writes anyway); ของใช้ only has เช็กของ.
+    const acts = [];
+    if (K.canEdit()) acts.push(actionCard('✅', 'เช็กของ', 'เช็กว่าของในตู้ตรงไหม', function () { K.go('stock'); }));
+    if (part !== 'storage' && K.canEdit() && S.items.length) acts.push(actionCard('🍳', 'ใช้ทำกับข้าว', 'บันทึกของที่ใช้', function () { startCook(); }));
+    if (part !== 'storage') acts.push(actionCard('💡', 'ทำอะไรกินดี', 'เมนูจากของที่มี', function () { K.go('cook'); }));
+    if (acts.length) wrap.appendChild(el('div', { class: 'actcards n' + acts.length }, acts));
     const lc = lastCheckLine();
     if (lc) wrap.appendChild(lc);
-    wrap.appendChild(el('div', { class: 'tools' }, [
-      K.canEdit() ? el('button', { class: 'btn', type: 'button', text: '📋 เช็กของ', on: { click: function () { K.go('stock'); } } }) : null,
-      K.canEdit() && S.items.length ? el('button', { class: 'btn primary', type: 'button', text: '🍳 ใช้ทำกับข้าว', on: { click: function () { startCook(); } } }) : null,
-      el('button', { class: 'btn', type: 'button', text: '🍽 ทำอะไรกินดี', on: { click: function () { K.go('cook'); } } }),
+    const zones = foodZones();
+    wrap.appendChild(el('div', { class: 'findgroup', role: 'search' }, [
+      el('div', { class: 'seg', role: 'group' }, [
+        el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🥢 ของกิน', on: { click: function () { part = 'fridge'; K.render(); } } }),
+        el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '🧴 ของใช้', on: { click: function () { part = 'storage'; K.render(); } } }),
+      ]),
+      findBox(wrap),
+      part !== 'storage' ? chipRow(zones) : null,
+      el('div', { class: 'banner info findmiss', hidden: true }),
     ]));
 
     if (part === 'storage') {

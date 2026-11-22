@@ -45,7 +45,7 @@
   /* ---------------- ทำกิน ---------------- */
   function ingLine(m) {
     let extra = '';
-    if (m.have && m.frozen) extra = ' · 🧊 อยู่ช่องฟรีซ';
+    if (m.have && m.frozen) extra = ' · ❄️ อยู่ช่องฟรีซ';
     else if (m.have && m.left !== null && m.left < 9999 && m.left <= 2) extra = ' · ⏰ ' + K.leftText(m.left);
     return el('div', { class: 'row' }, [el('div', { class: 'main', text: (m.have ? '✅ ' : '❌ ') + m.label + extra })]);
   }
@@ -78,7 +78,7 @@
   function recipeRow(r) {
     let note = r.missing ? 'ขาด ' + r.main.filter(function (m) { return !m.have; }).map(function (m) { return m.label; }).join(', ') : '';
     if (!r.missing && r.soonest && r.soonest.left <= 2) note = '⏰ ใช้' + r.soonest.name + ' (' + K.leftText(r.soonest.left) + ')';
-    if (r.frozenMain.length) note += (note ? ' · ' : '') + '🧊 ' + r.frozenMain.join(', ') + ' ละลายก่อน';
+    if (r.frozenMain.length) note += (note ? ' · ' : '') + '❄️ ' + r.frozenMain.join(', ') + ' ละลายก่อน';
     return el('button', { class: 'row', type: 'button', on: { click: function () { openRecipe(r); } } }, [
       el('div', { class: 'main' }, [r.menu, note ? el('span', { class: 'sub', text: note }) : null]),
       el('span', { class: 'end', text: '›' }),

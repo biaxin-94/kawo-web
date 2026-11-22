@@ -1,5 +1,5 @@
 /*
- * ตู้เย็น (fridge + storage, with ✅ / 🗑 / 🧊 and the freeze suggestion) and เช็กของ (stock check, v14.0: saved once on confirm).
+ * ตู้เย็น (fridge + storage, with ✅ / 🗑 / ❄️ and the freeze suggestion) and เช็กของ (stock check, v14.0: saved once on confirm).
  */
 (function () {
   'use strict';
@@ -24,7 +24,7 @@
   /* ---------------- item actions ---------------- */
   /**
    * One item: ✅ ใช้ / 🗑 ทิ้ง use the stepper right here (starts at 1, max = what we have), so there's
-   * no separate "how many?" step. มี/หมด items and qty 1 have no stepper. 🧊 move keeps its own question.
+   * no separate "how many?" step. มี/หมด items and qty 1 have no stepper. ❄️ move keeps its own question.
    */
   function openItem(it) {
     K.sheet(function (close) {
@@ -45,8 +45,8 @@
       if (it.loc !== 'Storage' && it.loc !== 'Freezer' && (toChill || toFreezer)) {
         const mv = function (dest) { close(); askMove(it, dest); };
         nodes.push(el('div', { class: 'btns' }, [
-          toChill ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
-          toFreezer ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }) : null,
+          toChill ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '🌡️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
+          toFreezer ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }) : null,
         ]));
       }
       if (!can) nodes.push(el('p', { class: 'hint', text: 'ดูอย่างเดียว: แก้ไขไม่ได้' }));
@@ -54,7 +54,7 @@
     });
   }
 
-  /** 🧊 move: how many to move (default all), unchanged from v8.0. */
+  /** ❄️ move: how many to move (default all), unchanged from v8.0. */
   function askMove(it, dest) {
     if (it.type === 'flag' || it.qty <= 1) return doAct(it, 'mv', dest, it.qty);
     K.sheet(function (close) {
@@ -89,7 +89,7 @@
   function freezeCard(h) {
     const can = K.canEdit();
     return el('div', { class: 'banner info' }, [
-      el('div', { text: '🧊 ' + h.name + ' ' + h.total + ' ที่ แต่' + h.locTh + ' เก็บได้ ' + h.days + ' วัน แบ่งแช่ฟรีซ ' + h.freeze + ' ที่ไหม?' }),
+      el('div', { text: '❄️ ' + h.name + ' ' + h.total + ' ที่ แต่' + h.locTh + ' เก็บได้ ' + h.days + ' วัน แบ่งแช่ฟรีซ ' + h.freeze + ' ที่ไหม?' }),
       el('div', { class: 'btns' }, [
         el('button', { class: 'btn small', type: 'button', text: 'ไม่ต้อง', on: { click: function () { dismissed[hintKey(h)] = 1; K.store.set(K.hkey('freezeDismissed'), dismissed); K.render(); } } }),
         el('button', { class: 'btn small primary', type: 'button', disabled: !can, text: 'แช่ฟรีซ ' + h.freeze + ' ที่',
@@ -362,7 +362,7 @@
         })
         : [el('div', { class: 'empty', text: 'ไม่มีของ' })]));
     });
-    wrap.appendChild(el('p', { class: 'hint', text: 'แตะที่รายการเพื่อ ✅ ใช้ / 🗑 ทิ้ง / 🧊 ย้าย' }));
+    wrap.appendChild(el('p', { class: 'hint', text: 'แตะที่รายการเพื่อ ✅ ใช้ / 🗑 ทิ้ง / ❄️ ย้าย' }));
     return wrap;
   }
 

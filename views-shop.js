@@ -205,7 +205,7 @@
           return el('div', { class: 'row' }, [el('div', { class: 'main' }, [a.name + (a.qtyText || ''), el('span', { class: 'sub', text: '→ ' + a.locTh + (a.exp ? ' · หมด ' + K.thDate(a.exp) : '') })])]);
         })),
         d.kept.length ? el('p', { class: 'hint', text: 'ยังอยู่ในรายการ: ' + d.kept.join(', ') }) : null,
-        hints.length ? el('div', { class: 'banner info', text: '🧊 มีของที่ควรแบ่งแช่ฟรีซ ดูที่หน้า ตู้เย็น' }) : null,
+        hints.length ? el('div', { class: 'banner info', text: '❄️ มีของที่ควรแบ่งแช่ฟรีซ ดูที่หน้า ตู้เย็น' }) : null,
         el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () {
           close(); if (hints.length) K.go('fridge');
           if (d.undo) K.undoBar(d.undo, '✅ เก็บเข้าตู้ ' + d.added.length + ' รายการ');   // v14.0

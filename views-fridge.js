@@ -425,6 +425,11 @@
       el('button', { type: 'button', 'aria-pressed': String(part === 'fridge'), text: '🥢 ของกิน', on: { click: function () { part = 'fridge'; K.render(); } } }),
       el('button', { type: 'button', 'aria-pressed': String(part === 'storage'), text: '🧴 ของใช้', on: { click: function () { part = 'storage'; K.render(); } } }),
     ]));
+    // v16.0: quick find right at the top (search, then the zone chips on ของกิน)
+    const zones = foodZones();
+    wrap.appendChild(findBox(wrap));
+    if (part !== 'storage') wrap.appendChild(chipRow(zones));
+    wrap.appendChild(el('div', { class: 'banner info findmiss', hidden: true }));
     // v12.0: เช็กของ, 🍳 ใช้ทำกับข้าว and ทำอะไรกินดี open from here (they used to be tabs / a button).
     // Viewers don't get 🍳 at all (the server refuses their writes anyway); the other two are read-only for them.
     const lc = lastCheckLine();
@@ -437,8 +442,6 @@
 
     if (part === 'storage') {
       const items = S.items.filter(function (i) { return !isFood(i); }).sort(function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); });
-      wrap.appendChild(findBox(wrap));
-      wrap.appendChild(el('div', { class: 'banner info findmiss', hidden: true }));
       wrap.appendChild(el('div', { class: 'summary' }, [el('span', { text: 'ทั้งหมด ' + items.length + ' รายการ' })]));
       if (!items.length) wrap.appendChild(el('div', { class: 'list empty', text: 'ยังไม่มีของใช้' }));
       const cats = [];
@@ -452,10 +455,6 @@
     }
 
     activeHints().forEach(function (h) { wrap.appendChild(freezeCard(h)); });
-    const zones = foodZones();
-    wrap.appendChild(findBox(wrap));
-    wrap.appendChild(chipRow(zones));
-    wrap.appendChild(el('div', { class: 'banner info findmiss', hidden: true }));
     const items = S.items.filter(isFood);
     const late = items.filter(function (i) { return i.loc !== 'Freezer' && i.left !== null && i.left < 0; }).length;
     const soon = items.filter(function (i) { return i.loc !== 'Freezer' && i.left !== null && i.left >= 0 && i.left <= days; }).length;

@@ -318,8 +318,86 @@
   function foodZones() { return FRIDGE_LOCS.filter(function (z) { return z === 'Fridge' || z === 'Kitchen' || K.zoneOn(z); }); }
   function isFood(i) { return i.loc !== 'Storage'; }
 
+  /* ---- quick find (v16.0): search box (names + Dictionary aliases) and location chips ---- */
+  let findQ = '';                                                   // kept while the app is open
+  let chip = K.store.get(K.hkey('chip.v1'), 'all');                 // remembered on the phone
+  K.onHousehold(function () { chip = K.store.get(K.hkey('chip.v1'), 'all'); findQ = ''; });
+  const SOON_DAYS = 2;
+  const CHIP_TH = { Fridge: 'ตู้เย็น', Chill: 'Chill', Freezer: 'ฟรีซ', Pantry: 'นอกตู้', Kitchen: 'ตู้กับข้าว' };
+  function aliasesOf(name) { const d = K.dictEntry(name); return d ? d.aliases : ''; }
+  function searchText(i) { return (i.name + ' ' + aliasesOf(i.name)).toLowerCase(); }
+  function isSoon(i) { return !K.noExp(i.loc) && i.left !== null && i.left !== undefined && i.left <= SOON_DAYS; }
+
+  /** The Dictionary entry a search word means (exact name/alias first, else the only one containing it), or null. */
+  function dictFor(q) {
+    const l = q.toLowerCase();
+    const exact = K.S.dict.filter(function (d) { return d.name.toLowerCase() === l || d.aliases.toLowerCase().split(',').map(function (a) { return a.trim(); }).indexOf(l) >= 0; })[0];
+    if (exact) return exact;
+    const some = K.S.dict.filter(function (d) { return d.name.toLowerCase().indexOf(l) >= 0 || d.aliases.toLowerCase().indexOf(l) >= 0; });
+    return some.length === 1 ? some[0] : null;
+  }
+
+  function addFromSearch(q) {
+    const d = dictFor(q);
+    if (d) { K.write('listAdd', { name: d.name }); return; }
+    K.sheet(function (close) {
+      return [el('h3', { text: '"' + q + '" อยู่หมวดไหน?' }), el('div', { class: 'sub', text: 'จำไว้ ครั้งหน้าไม่ต้องถาม' }),
+        el('div', { class: 'list' }, (K.S.meta.cats || []).map(function (c) {
+          return el('button', { class: 'row', type: 'button', on: { click: function () { close(); K.write('listAdd', { name: q, cat: c.id }); } } }, [
+            el('div', { class: 'main', text: (c.icon || '') + ' ' + c.th }),
+          ]);
+        }))];
+    });
+  }
+
+  /** Shows / hides cards and sections for the search word (no re-render, so the keyboard stays open). */
+  function applyFind(wrap) {
+    const q = findQ.trim().toLowerCase();
+    let shown = 0;
+    wrap.querySelectorAll('.zone').forEach(function (sec) {
+      let n = 0;
+      sec.querySelectorAll('.row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
+      const empty = sec.querySelector('.list > .empty');
+      if (empty) empty.hidden = !!q;
+      sec.hidden = !!q && !n;
+      sec.classList.toggle('found', !!q && n > 0);   // a folded section opens while it has matches
+      shown += n;
+    });
+    const miss = wrap.querySelector('.findmiss');
+    if (!miss) return;
+    miss.hidden = !q || shown > 0;
+    if (miss.hidden) return;
+    const other = K.S.items.filter(function (i) { return (part === 'storage' ? isFood(i) : !isFood(i)) && searchText(i).indexOf(q) >= 0; });
+    const word = findQ.trim();
+    miss.replaceChildren.apply(miss, (other.length ? [
+      el('span', { text: 'ไม่มี "' + word + '" ใน' + (part === 'storage' ? 'ของใช้' : 'ของกิน') + ' ' }),
+      el('button', { class: 'btn small primary', type: 'button', text: 'เจอใน' + (part === 'storage' ? 'ของกิน' : 'ของใช้') + ' (' + other.length + ')',
+        on: { click: function () { part = part === 'storage' ? 'fridge' : 'storage'; chip = 'all'; K.render(); } } }),
+    ] : [
+      el('span', { text: 'ไม่มี "' + word + '" ในบ้าน ' }),
+      K.canEdit() ? el('button', { class: 'btn small primary', type: 'button', text: '+ เพิ่มลงรายการซื้อ', on: { click: function () { addFromSearch(word); } } }) : null,
+    ]).filter(Boolean));
+  }
+
+  function findBox(wrap) {
+    const input = el('input', { id: 'find', class: 'search find', type: 'search', placeholder: '🔎 หาของ เช่น ไข่ หรือ egg', 'aria-label': 'หาของ', value: findQ,
+      autocomplete: 'off', on: { input: function () { findQ = input.value; applyFind(wrap); } } });
+    return input;
+  }
+
+  function chipRow(zones) {
+    if (chip !== 'all' && chip !== 'soon' && zones.indexOf(chip) < 0) chip = 'all';
+    const one = function (id, text) {
+      return el('button', { type: 'button', class: 'fchip', 'aria-pressed': String(chip === id), text: text, on: { click: function () {
+        chip = id; K.store.set(K.hkey('chip.v1'), chip); K.render();
+      } } });
+    };
+    return el('div', { class: 'fchips', role: 'group', 'aria-label': 'ที่เก็บ' }, [one('all', 'ทั้งหมด')]
+      .concat(zones.map(function (z) { return one(z, CHIP_TH[z] || K.locTh(z)); })).concat([one('soon', '⏰ ใกล้หมดอายุ')]));
+  }
+
   function itemCard(i) {
-    return el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, on: { click: function () { openItem(i); } } }, [
+    return el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, 'data-s': searchText(i), on: { click: function () { openItem(i); } } }, [
       itemLine(i, true), K.noExp(i.loc) ? null : el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
     ]);
   }
@@ -359,6 +437,8 @@
 
     if (part === 'storage') {
       const items = S.items.filter(function (i) { return !isFood(i); }).sort(function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); });
+      wrap.appendChild(findBox(wrap));
+      wrap.appendChild(el('div', { class: 'banner info findmiss', hidden: true }));
       wrap.appendChild(el('div', { class: 'summary' }, [el('span', { text: 'ทั้งหมด ' + items.length + ' รายการ' })]));
       if (!items.length) wrap.appendChild(el('div', { class: 'list empty', text: 'ยังไม่มีของใช้' }));
       const cats = [];
@@ -367,10 +447,15 @@
         const list = items.filter(function (i) { return i.catTh === c; });
         wrap.appendChild(zoneSection('cat:' + c, c, list.length, '', list.map(itemCard)));
       });
+      applyFind(wrap);
       return wrap;
     }
 
     activeHints().forEach(function (h) { wrap.appendChild(freezeCard(h)); });
+    const zones = foodZones();
+    wrap.appendChild(findBox(wrap));
+    wrap.appendChild(chipRow(zones));
+    wrap.appendChild(el('div', { class: 'banner info findmiss', hidden: true }));
     const items = S.items.filter(isFood);
     const late = items.filter(function (i) { return i.loc !== 'Freezer' && i.left !== null && i.left < 0; }).length;
     const soon = items.filter(function (i) { return i.loc !== 'Freezer' && i.left !== null && i.left >= 0 && i.left <= days; }).length;
@@ -379,14 +464,16 @@
       late ? el('span', { class: 'bad', text: 'เลยกำหนด ' + late }) : null,
       soon ? el('span', { class: 'warn', text: 'ใช้ภายใน ' + days + ' วัน ' + soon }) : null,
     ]));
-    const zones = foodZones();
     zones.concat(['other']).forEach(function (loc) {
-      const list = items.filter(function (i) { return loc === 'other' ? zones.indexOf(i.loc) < 0 : i.loc === loc; })
+      if (chip !== 'all' && chip !== 'soon' && chip !== loc) return;   // a zone chip shows that zone only
+      const list = items.filter(function (i) { return (loc === 'other' ? zones.indexOf(i.loc) < 0 : i.loc === loc) && (chip !== 'soon' || isSoon(i)); })
         .sort(K.noExp(loc) ? function (a, b) { return a.catTh.localeCompare(b.catTh, 'th') || a.name.localeCompare(b.name, 'th'); } : byExpiry);
-      if (!list.length && loc === 'other') return;
+      if (!list.length && (loc === 'other' || chip === 'soon')) return;
       wrap.appendChild(zoneSection(loc, loc === 'other' ? '📍 ที่อื่นๆ' : K.locTh(loc), list.length, loc === 'other' ? '' : loc.toLowerCase(), list.map(itemCard)));
     });
+    if (chip === 'soon' && !items.some(isSoon)) wrap.appendChild(el('div', { class: 'list empty', text: 'ไม่มีของใกล้หมดอายุ 👍' }));
     wrap.appendChild(el('p', { class: 'hint', text: 'แตะที่รายการเพื่อ ✅ ใช้ / 🗑 ทิ้ง / ❄️ ย้าย · แตะหัวข้อเพื่อพับเก็บ' }));
+    applyFind(wrap);
     return wrap;
   }
 

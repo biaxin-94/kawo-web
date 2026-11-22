@@ -259,3 +259,14 @@ button.row { width: 100%; text-align: left; }
 .zone.shut .zonehead .chev { transform: rotate(-90deg); }
 .zone.shut > .list { display: none; }
 .zone.shut { padding-bottom: 0; }
+
+/* ---------- v16.0: quick find ---------- */
+.search.find { margin: 10px 0 6px; font-size: 16px; min-height: 46px; background: var(--card); }
+.fchips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+.fchips::-webkit-scrollbar { display: none; }
+.fchip { flex: 0 0 auto; min-height: 38px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--card);
+  color: var(--text); font-size: 14px; }
+.fchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.findmiss { margin: 6px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.findmiss[hidden], .zone[hidden], .row[hidden], .empty[hidden] { display: none; }
+.zone.shut.found > .list { display: flex; }

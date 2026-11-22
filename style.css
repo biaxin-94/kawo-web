@@ -293,3 +293,9 @@ button.row { width: 100%; text-align: left; }
 /* v17.0: "do we have it" line under shopping items: plain secondary text, never struck through */
 .row .stockline { font-weight: 400; }
 .row.picked .main .stockline { text-decoration: none; }
+
+/* v17.0: soft sage highlight (e.g. "ทำเมนูจากของนี้" when the item expires within 2 days), filter chip on ทำอะไรกินดี */
+.btn.soft { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.filterchips { margin: 6px 0 4px; }
+.chip.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.list.empty p { margin: 0 0 10px; }

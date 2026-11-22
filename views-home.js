@@ -86,12 +86,68 @@
     ]);
   }
 
+  /*
+   * v17.0: "🍳 ทำเมนูจากของนี้" on an item card opens this page filtered to recipes that use that item (as a main or
+   * optional ingredient, alternatives included), in the usual order, with a removable chip. No recipe: ask the
+   * persona in the group (LIFF sendMessages as the user; else copy the text).
+   */
+  let cookFor = null;   // {name, soon}
+  K.openCookFor = function (it) {
+    cookFor = { name: it.name, soon: it.left !== null && it.left !== undefined && it.left <= 2 && !K.noExp(it.loc) };
+    K.cookForPending = true;   // onEnter keeps this filter; opening ทำอะไรกินดี any other way starts unfiltered
+    K.go('cook');
+  };
+  function usesItem(r, name) {
+    return r.main.concat(r.opt).some(function (m) { return m.name === name || String(m.label).split('/').map(function (x) { return x.trim(); }).indexOf(name) >= 0; });
+  }
+  function personaName() { return (K.S.meta && K.S.meta.persona && K.S.meta.persona.name) || 'กะวอ'; }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* older webviews */ }
+    try {
+      const ta = el('textarea', { value: text, readonly: true, style: 'position:fixed;opacity:0' });
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+    } catch (e) { return false; }
+  }
+
+  /** Posts the question into the household's group as the user (free reply from the persona), else copies it. */
+  async function askPersona(text) {
+    const L = window.liff;
+    try {
+      const ctx = L && L.getContext ? L.getContext() : null;
+      if (L && L.isInClient && L.isInClient() && L.isApiAvailable && L.isApiAvailable('sendMessages') && ctx && (ctx.type === 'group' || ctx.type === 'room')) {
+        await L.sendMessages([{ type: 'text', text: text }]);
+        K.toast('ส่งในกลุ่มแล้ว');
+        if (L.closeWindow) L.closeWindow();
+        return;
+      }
+    } catch (e) { /* no permission / not opened from the group: copy instead */ }
+    const ok = await copyText(text);
+    if (ok) K.toast('คัดลอกแล้ว วางในแชทกลุ่มได้เลย');
+    else K.sheet(function (close) { return [el('h3', { text: 'คัดลอกข้อความนี้ไปวางในแชทกลุ่ม' }), el('p', { text: text }), el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: close } })])]; });
+  }
+
   function renderCook() {
-    const all = K.S.recipes;
+    let all = K.S.recipes;
+    const wrap = el('div', {}, [el('h1', { class: 'title', text: '🍳 ทำอะไรกินดี' })]);
+    if (cookFor) {
+      const f = cookFor;
+      all = all.filter(function (r) { return usesItem(r, f.name); });
+      wrap.appendChild(el('div', { class: 'chips filterchips' }, [el('span', { class: 'chip on' }, ['🍳 ' + f.name,
+        el('button', { class: 'x', type: 'button', 'aria-label': 'เอาตัวกรอง ' + f.name + ' ออก', text: '✕', on: { click: function () { cookFor = null; K.render(); } } })])]));
+      if (!all.length) {
+        const who = personaName();
+        const q = who + ' มี' + f.name + (f.soon ? 'ใกล้หมด' : '') + ' ทำอะไรกินดี';
+        wrap.appendChild(el('div', { class: 'list empty' }, [
+          el('p', { text: 'ยังไม่มีเมนูที่ใช้ ' + f.name }),
+          K.canEdit() ? el('button', { class: 'btn primary', type: 'button', text: 'ให้' + who + 'ช่วยคิดเมนู', on: { click: function () { askPersona(q); } } }) : null,
+        ]));
+        return wrap;
+      }
+    }
     const ready = all.filter(function (r) { return !r.missing; });
     const almost = all.filter(function (r) { return r.missing === 1; });
     const rest = all.filter(function (r) { return r.missing > 1; });
-    const wrap = el('div', {}, [el('h1', { class: 'title', text: '🍳 ทำอะไรกินดี' })]);
     if (!all.length) wrap.appendChild(el('p', { class: 'status', text: 'ยังไม่มีเมนู เพิ่มได้ที่ ตั้งค่า › เมนู' }));
     if (ready.length) wrap.appendChild(K.group('✅ ทำได้เลย (' + ready.length + ')', ready.map(recipeRow)));
     if (almost.length) wrap.appendChild(K.group('🟡 ขาดอีกอย่างเดียว', almost.map(recipeRow)));
@@ -99,5 +155,6 @@
     return wrap;
   }
 
-  K.tab({ id: 'cook', icon: '🍽', label: 'ทำอะไรกินดี', render: renderCook, nav: false, parent: 'fridge' });
+  K.tab({ id: 'cook', icon: '🍽', label: 'ทำอะไรกินดี', render: renderCook, nav: false, parent: 'fridge',
+    onEnter: function () { if (!K.cookForPending) cookFor = null; K.cookForPending = false; } });
 })();

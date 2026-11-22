@@ -49,6 +49,12 @@
           toFreezer ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }) : null,
         ]));
       }
+      // v17.0: menus that use this item (food only); soft sage when it should be used within 2 days
+      if (it.loc !== 'Storage') {
+        const soon = it.left !== null && it.left !== undefined && it.left <= 2 && !K.noExp(it.loc);
+        nodes.push(el('div', { class: 'btns' }, [el('button', { class: 'btn' + (soon ? ' soft' : ''), type: 'button', text: '🍳 ทำเมนูจากของนี้',
+          on: { click: function () { close(); K.openCookFor(it); } } })]));
+      }
       if (!can) nodes.push(el('p', { class: 'hint', text: 'ดูอย่างเดียว: แก้ไขไม่ได้' }));
       return nodes;
     });

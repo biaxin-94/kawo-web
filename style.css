@@ -289,3 +289,7 @@ button.row { width: 100%; text-align: left; }
 .findgroup .seg { margin-top: 2px; }
 .findgroup .search.find { margin-top: 8px; }
 .findgroup .findmiss { margin: 4px 0 6px; }
+
+/* v17.0: "do we have it" line under shopping items: plain secondary text, never struck through */
+.row .stockline { font-weight: 400; }
+.row.picked .main .stockline { text-decoration: none; }

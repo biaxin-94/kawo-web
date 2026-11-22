@@ -162,7 +162,7 @@
         { onUnder: function () { delete cook.sel[it.id]; saveCook(); K.render(); } }).node;
     } else if (on) right = el('span', { class: 'end', text: cook.sel[it.id] + ' ' + K.unitWord(it.type, it.unit) });
     const where = K.locTh(it.loc) + (it.left !== null && it.loc !== 'Freezer' && it.loc !== 'Storage' ? ' · ' + K.leftText(it.left, it.exp) : '') + (isOpt ? ' · ของเสริม' : '');
-    return el('div', { class: 'row' + (on ? ' picked' : '') }, [
+    return el('div', { class: 'row ' + K.fresh(it) + (on ? ' picked' : '') }, [
       el('button', { class: 'check', type: 'button', disabled: !!cook.pending, 'aria-pressed': String(on), 'aria-label': 'ใช้ ' + it.name, text: on ? '✓' : '', on: { click: toggle } }),
       el('div', { class: 'main', on: { click: toggle } }, [
         it.name, K.qtyText(it.type, it.qty, it.unit) ? el('span', { class: 'qty', text: 'มี ' + K.qtyText(it.type, it.qty, it.unit) }) : null,
@@ -335,7 +335,7 @@
       cats.forEach(function (c) {
         const list = items.filter(function (i) { return i.catTh === c; });
         wrap.appendChild(K.group(c + ' (' + list.length + ')', list.map(function (i) {
-          return el('button', { class: 'row', type: 'button', on: { click: function () { openItem(i); } } }, [itemLine(i, false)]);
+          return el('button', { class: 'row nodate', type: 'button', on: { click: function () { openItem(i); } } }, [itemLine(i, false)]);
         })));
       });
       return wrap;
@@ -355,8 +355,7 @@
       if (!list.length && loc === 'other') return;
       wrap.appendChild(K.group((loc === 'other' ? '📍 ที่อื่นๆ' : K.locTh(loc)) + (list.length ? ' (' + list.length + ')' : ''), list.length
         ? list.map(function (i) {
-          const u = i.loc === 'Freezer' ? '' : K.urgency(i.left, days);
-          return el('button', { class: 'row' + (u ? ' ' + u : ''), type: 'button', on: { click: function () { openItem(i); } } }, [
+          return el('button', { class: 'row ' + K.fresh(i), type: 'button', on: { click: function () { openItem(i); } } }, [
             itemLine(i, true), el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
           ]);
         })
@@ -370,6 +369,7 @@
     id: 'fridge', icon: '🧊', label: 'ตู้เย็น', render: renderFridge, banner: cookBanner,
     afterLoad: function () { if (cook && cook.pending) sendCook(); },   // reopened with an unsent batch: send it now
     badge: function () { return K.S.items.filter(function (i) { return i.loc !== 'Freezer' && i.loc !== 'Storage' && i.left !== null && i.left <= K.S.meta.alertDays; }).length; },
+    urgent: function () { return K.S.items.some(function (i) { return i.loc !== 'Storage' && i.left !== null && i.left <= 0; }); },   // expired or expires today
   });
 
   /* ---------------- last stock check line (ตู้เย็น landing, v14.0) ---------------- */
@@ -468,7 +468,7 @@
           on: { click: function () { setQty(it, v === 0 ? baseOf(it) : 0); } } }),
       ]);
     }
-    return el('div', { class: 'row ck' + (v === 0 ? ' gone' : changed ? ' changed' : '') }, [main, ctl]);
+    return el('div', { class: 'row ck ' + K.fresh(it) + (v === 0 ? ' gone' : changed ? ' changed' : '') }, [main, ctl]);
   }
 
   /** v15.0: ชิ้น / ที่ with more than 1 can be split: ทิ้งทั้งหมด · ยังดีอยู่ · แบ่ง (ทิ้ง X จาก N, the rest is still good). */
@@ -479,7 +479,7 @@
     const btn = function (cls, act, text, click) {
       return el('button', { class: cls, type: 'button', 'aria-pressed': String(a === act), text: text, on: { click: click || function () { setExp(it, act); } } });
     };
-    return el('div', { class: 'row ck' + (a === 'toss' ? ' gone' : a ? ' changed' : '') }, [
+    return el('div', { class: 'row ck late' + (a === 'toss' ? ' gone' : a ? ' changed' : '') }, [
       el('div', { class: 'main' }, [it.name + (K.qtyText(it.type, it.qty, it.unit) ? ' ' + K.qtyText(it.type, it.qty, it.unit) : ''),
         el('span', { class: 'sub', text: K.locTh(it.loc) + ' · ' + K.leftText(it.left, it.exp) }),
         state ? el('span', { class: 'was', text: state }) : null]),

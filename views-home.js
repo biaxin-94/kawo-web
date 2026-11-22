@@ -8,7 +8,7 @@
   /* ---------------- งานบ้าน ---------------- */
   function choreWhen(c) {
     if (c.left < 0) return { cls: 'late', text: 'เลย ' + (-c.left) + ' วัน' };
-    if (c.left === 0) return { cls: 'late', text: 'วันนี้' };
+    if (c.left === 0) return { cls: 'soon', text: 'วันนี้' };   // v15.0: red only when overdue
     if (c.left === 1) return { cls: 'soon', text: 'พรุ่งนี้' };
     return { cls: '', text: K.thDate(c.due) };
   }
@@ -40,6 +40,7 @@
   K.tab({
     id: 'chores', icon: '🧹', label: 'งานบ้าน', render: renderChores,
     badge: function () { return K.S.chores.filter(function (c) { return c.active && c.left <= 0; }).length; },
+    urgent: function () { return K.S.chores.some(function (c) { return c.active && c.left < 0; }); },   // v15.0: amber only when overdue
   });
 
   /* ---------------- ทำกิน ---------------- */
@@ -47,7 +48,7 @@
     let extra = '';
     if (m.have && m.frozen) extra = ' · ❄️ อยู่ช่องฟรีซ';
     else if (m.have && m.left !== null && m.left < 9999 && m.left <= 2) extra = ' · ⏰ ' + K.leftText(m.left);
-    return el('div', { class: 'row' }, [el('div', { class: 'main', text: (m.have ? '✅ ' : '❌ ') + m.label + extra })]);
+    return el('div', { class: 'row ' + (m.have ? 'fresh' : 'nodate') }, [el('div', { class: 'main', text: (m.have ? '✅ ' : '❌ ') + m.label + extra })]);
   }
 
   function openRecipe(r) {

@@ -76,6 +76,16 @@
     if (left < 0) return 'late';
     return left <= days ? 'soon' : '';
   };
+  /**
+   * v15.0: freshness bar class for an item card: fresh (> FRESH_SOON_DAYS left), soon (0..2 days), late (expired),
+   * nodate (ตู้เก็บของ, or no date).
+   */
+  const FRESH_SOON_DAYS = 2;
+  K.fresh = function (it) {
+    if (!it || it.loc === 'Storage' || it.left === null || it.left === undefined) return 'nodate';
+    if (it.left < 0) return 'late';
+    return it.left <= FRESH_SOON_DAYS && it.loc !== 'Freezer' ? 'soon' : 'fresh';
+  };
   K.locTh = function (id) { const l = (K.S.meta ? K.S.meta.locs : []).filter(function (x) { return x.id === id; })[0]; return l ? l.icon + ' ' + l.th : id; };
   K.catTh = function (id) { const c = (K.S.meta ? K.S.meta.cats : []).filter(function (x) { return x.id === id; })[0]; return c ? c.th : id; };
   K.dictEntry = function (name) { return K.S.dict.filter(function (d) { return d.name === name; })[0] || null; };
@@ -414,10 +424,11 @@
     const here = tab.nav === false ? (tab.parent || '') : tab.id;   // a page inside a tab lights up that tab
     nav.replaceChildren.apply(nav, K.tabs.filter(function (t) { return t.nav !== false; }).map(function (t) {
       const badge = t.badge ? t.badge() : 0;
+      const urgent = badge && t.urgent ? t.urgent() : false;   // v15.0: soft amber only when it needs attention today
       return el('button', { type: 'button', 'aria-current': t.id === here ? 'page' : null, on: { click: function () { K.go(t.id); } } }, [
         el('span', { class: 'ic', text: t.icon }),
         el('span', { text: t.label }),
-        badge ? el('span', { class: 'dot', text: String(badge) }) : null,
+        badge ? el('span', { class: 'dot' + (urgent ? ' urgent' : ''), text: String(badge) }) : null,
       ]);
     }));
     nav.hidden = false;

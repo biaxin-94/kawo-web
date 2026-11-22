@@ -74,7 +74,7 @@
     wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', disabled: !can(), text: '+ เพิ่มของ', on: { click: addToList } })]));
     if (!list.length) wrap.appendChild(el('p', { class: 'status', text: 'รายการซื้อว่างอยู่' }));
     grouped(list, function (r) {
-      return el('button', { class: 'row', type: 'button', on: { click: function () { editRow(r); } } }, [
+      return el('button', { class: 'row nodate', type: 'button', on: { click: function () { editRow(r); } } }, [
         el('div', { class: 'main' }, [r.name, K.qtyText(r.type, r.qty, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, r.qty, r.unit) }) : null]),
         el('span', { class: 'end', text: '✏️' }),
       ]);
@@ -121,7 +121,7 @@
     grouped(list, function (r) {
       const picked = shop.picks[r.name] !== undefined;
       const q = picked ? shop.picks[r.name] : r.qty;
-      return el('div', { class: 'row' + (picked ? ' picked' : '') }, [
+      return el('div', { class: 'row nodate' + (picked ? ' picked' : '') }, [
         el('button', { class: 'check', type: 'button', disabled: !can(), 'aria-pressed': String(picked), 'aria-label': 'หยิบ ' + r.name, text: picked ? '✓' : '', on: { click: function () { togglePick(r); } } }),
         el('div', { class: 'main', on: { click: function () { togglePick(r); } } }, [r.name, K.qtyText(r.type, q, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, q, r.unit) }) : null]),
         r.type !== 'flag' ? el('button', { class: 'pill', type: 'button', disabled: !can(), text: '✏️', 'aria-label': 'แก้จำนวน ' + r.name, on: { click: function () { editPick(r); } } }) : null,
@@ -129,7 +129,7 @@
     }).forEach(function (n) { wrap.appendChild(n); });
 
     wrap.appendChild(K.group('➕ ซื้อเพิ่ม (นอกรายการ)', shop.extras.length ? shop.extras.map(function (x, i) {
-      return el('div', { class: 'row picked' }, [
+      return el('div', { class: 'row nodate picked' }, [
         el('span', { class: 'check', text: '✓' }),
         el('div', { class: 'main', text: label(x.name, x.qty) }),
         el('button', { class: 'pill', type: 'button', text: 'เอาออก', on: { click: function () { shop.extras.splice(i, 1); save(); K.render(); } } }),

@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '18.1';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '19.0';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -106,7 +106,7 @@
   };
 
   /* ---------------- households (v11.0) ---------------- */
-  const HH_KEYS = ['shop.v1', 'cook.v1', 'check.v1', 'freezeDismissed', 'fold.v1', 'chip.v1'];   // phone storage that belongs to one household
+  const HH_KEYS = ['shop.v1', 'cook.v1', 'check.v1', 'freezeDismissed', 'fold.v1', 'chip.v1', 'setup.v1'];   // phone storage that belongs to one household
   const hhHooks = [];
   /** Storage key for this household's data ('kawo.<hid>.<base>'; no household = the pre-v11 key). */
   K.hkey = function (base, hid) { hid = hid === undefined ? K.hid : hid; return hid ? 'kawo.' + hid + '.' + base : 'kawo.' + base; };
@@ -361,7 +361,7 @@
    * tab with nav: false: เช็กของ and ทำอะไรกินดี open from ตู้เย็น (parent: 'fridge', with a ← back bar), all
    * settings open from ⚙️ in the top corner. A future page goes inside one of the 4 tabs or under ⚙️.
    */
-  const TAB_ORDER = ['fridge', 'shop', 'chores', 'history', 'stock', 'cook', 'settings'];
+  const TAB_ORDER = ['fridge', 'shop', 'chores', 'history', 'stock', 'setup', 'cook', 'settings'];
   const LANDING = 'fridge';
   let lastMain = LANDING;   // where ← goes back to from ⚙️
   K.tab = function (t) {
@@ -489,5 +489,7 @@
     let ok = await K.reload();
     if (!ok && !fromLink && K.hid && !(K.S.households || []).length) { K.setHousehold(''); ok = await K.reload(); }   // a stale saved household
     if (ok) K.tabs.forEach(function (t) { if (t.afterLoad) t.afterLoad(); });
+    // v19.0: the welcome card's เริ่มต้นตู้ button opens the app with &page=setup
+    if (ok && new URLSearchParams(location.search).get('page') === 'setup' && K.canEdit()) K.go('setup');
   };
 })();

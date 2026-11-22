@@ -9,6 +9,8 @@ The back end (Google Apps Script, private repo `kawo-backend`) has the full proj
 - v11.0 households: every request carries `hh` (the household ID from the app link `?h=`, else the last one on
   the phone); phone storage is per household (`K.hkey`), and the admin-only ⚙️ ตั้งค่าบ้าน lives in
   `views-settings.js`. Household IDs are data too: never commit real ones here.
+- v14.0: `K.write` shows the เลิกทำ bar (`K.undoBar`) when the server returns `data.undo`; pages with a draft set
+  `unsaved()` / `discard()` on their tab so `K.go` asks before leaving. เช็กของ = `views-fridge.js` (draft `check.v1`).
 - **This repo is public. Never put secrets here**: no tokens, keys, LINE user IDs, `?k=` webhook key.
   The server checks the LINE login and the role on every request; the page only hides buttons.
 

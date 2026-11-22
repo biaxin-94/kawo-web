@@ -69,13 +69,41 @@
     return out;
   }
 
+  /*
+   * v17.0: one small gray line under each list item: what we still have, or when / how it ran out.
+   * Built from the data already on the phone (items + list.gone), once per render, so ticking stays instant.
+   */
+  const GONE_TH = { use: 'ใช้หมด', toss: 'ทิ้งไป', stock_check_remove: 'เช็กของแล้วหมด' };
+  function stockLines() {
+    const have = {};
+    K.S.items.forEach(function (i) {
+      const h = have[i.name] || (have[i.name] = { qty: 0, type: i.type, unit: i.unit, left: null, exp: null });
+      h.qty += Number(i.qty) || 0;
+      if (!K.noExp(i.loc) && i.left !== null && i.left !== undefined && (h.left === null || i.left < h.left)) { h.left = i.left; h.exp = i.exp; }
+    });
+    const today = Date.parse(K.S.meta.today + 'T00:00:00Z');
+    return function (r) {
+      const h = have[r.name];
+      if (h) {
+        const amount = h.type === 'flag' ? 'มีอยู่' : 'มีอยู่ ' + h.qty + ' ' + K.unitWord(h.type, h.unit);
+        return amount + (h.left !== null ? ' · ' + K.leftText(h.left, h.exp) : '');
+      }
+      if (!r.gone) return '';
+      const ago = Math.round((today - Date.parse(r.gone.ymd + 'T00:00:00Z')) / 864e5);
+      return (ago <= 0 ? 'หมดวันนี้' : ago === 1 ? 'หมดเมื่อวาน' : 'หมดเมื่อ ' + ago + ' วันก่อน') + (GONE_TH[r.gone.how] ? ' · ' + GONE_TH[r.gone.how] : '');
+    };
+  }
+
   function renderPlan(wrap) {
     const list = K.S.list;
     wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', disabled: !can(), text: '+ เพิ่มของ', on: { click: addToList } })]));
     if (!list.length) wrap.appendChild(el('p', { class: 'status', text: 'รายการซื้อว่างอยู่' }));
+    const line = stockLines();
     grouped(list, function (r) {
-      return el('button', { class: 'row', type: 'button', on: { click: function () { editRow(r); } } }, [
-        el('div', { class: 'main' }, [r.name, K.qtyText(r.type, r.qty, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, r.qty, r.unit) }) : null]),
+      const sl = line(r);
+      return el('button', { class: 'row nodate', type: 'button', on: { click: function () { editRow(r); } } }, [
+        el('div', { class: 'main' }, [r.name, K.qtyText(r.type, r.qty, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, r.qty, r.unit) }) : null,
+          sl ? el('span', { class: 'sub stockline', text: sl }) : null]),
         el('span', { class: 'end', text: '✏️' }),
       ]);
     }).forEach(function (n) { wrap.appendChild(n); });
@@ -118,18 +146,21 @@
     const pickedN = Object.keys(shop.picks).length + shop.extras.length;
     wrap.appendChild(el('p', { class: 'hint', text: 'แตะเพื่อติ๊กว่าหยิบแล้ว · แตะ ✏️ แก้จำนวน · ติ๊กเก็บไว้ในเครื่อง สัญญาณหายก็ไม่หาย' }));
     if (!list.length) wrap.appendChild(el('p', { class: 'status', text: 'ไม่มีของในรายการ ซื้ออะไรมาก็กด + ซื้อเพิ่ม' }));
+    const line = stockLines();
     grouped(list, function (r) {
       const picked = shop.picks[r.name] !== undefined;
+      const sl = line(r);
       const q = picked ? shop.picks[r.name] : r.qty;
-      return el('div', { class: 'row' + (picked ? ' picked' : '') }, [
+      return el('div', { class: 'row nodate' + (picked ? ' picked' : '') }, [
         el('button', { class: 'check', type: 'button', disabled: !can(), 'aria-pressed': String(picked), 'aria-label': 'หยิบ ' + r.name, text: picked ? '✓' : '', on: { click: function () { togglePick(r); } } }),
-        el('div', { class: 'main', on: { click: function () { togglePick(r); } } }, [r.name, K.qtyText(r.type, q, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, q, r.unit) }) : null]),
+        el('div', { class: 'main', on: { click: function () { togglePick(r); } } }, [r.name, K.qtyText(r.type, q, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, q, r.unit) }) : null,
+          sl ? el('span', { class: 'sub stockline', text: sl }) : null]),
         r.type !== 'flag' ? el('button', { class: 'pill', type: 'button', disabled: !can(), text: '✏️', 'aria-label': 'แก้จำนวน ' + r.name, on: { click: function () { editPick(r); } } }) : null,
       ]);
     }).forEach(function (n) { wrap.appendChild(n); });
 
     wrap.appendChild(K.group('➕ ซื้อเพิ่ม (นอกรายการ)', shop.extras.length ? shop.extras.map(function (x, i) {
-      return el('div', { class: 'row picked' }, [
+      return el('div', { class: 'row nodate picked' }, [
         el('span', { class: 'check', text: '✓' }),
         el('div', { class: 'main', text: label(x.name, x.qty) }),
         el('button', { class: 'pill', type: 'button', text: 'เอาออก', on: { click: function () { shop.extras.splice(i, 1); save(); K.render(); } } }),
@@ -205,8 +236,11 @@
           return el('div', { class: 'row' }, [el('div', { class: 'main' }, [a.name + (a.qtyText || ''), el('span', { class: 'sub', text: '→ ' + a.locTh + (a.exp ? ' · หมด ' + K.thDate(a.exp) : '') })])]);
         })),
         d.kept.length ? el('p', { class: 'hint', text: 'ยังอยู่ในรายการ: ' + d.kept.join(', ') }) : null,
-        hints.length ? el('div', { class: 'banner info', text: '🧊 มีของที่ควรแบ่งแช่ฟรีซ ดูที่หน้า ตู้เย็น' }) : null,
-        el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { close(); if (hints.length) K.go('fridge'); } } })]),
+        hints.length ? el('div', { class: 'banner info', text: '❄️ มีของที่ควรแบ่งแช่ฟรีซ ดูที่หน้า ตู้เย็น' }) : null,
+        el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () {
+          close(); if (hints.length) K.go('fridge');
+          if (d.undo) K.undoBar(d.undo, '✅ เก็บเข้าตู้ ' + d.added.length + ' รายการ');   // v14.0
+        } } })]),
       ];
     });
   }

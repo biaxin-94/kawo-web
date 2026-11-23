@@ -130,9 +130,14 @@
     K.cookForPending = true;   // onEnter keeps this filter; opening ทำอะไรกินดี any other way starts unfiltered
     K.go('cook');
   };
+  // The server shows each slot as only the first alternative in stock, so also check the full list in r.edit.
   function usesItem(r, name) {
-    return r.main.concat(r.opt).some(function (m) { return m.name === name || String(m.label).split('/').map(function (x) { return x.trim(); }).indexOf(name) >= 0; });
+    const slots = r.main.concat(r.opt).some(function (m) { return m.name === name || String(m.label).split('/').map(function (x) { return x.trim(); }).indexOf(name) >= 0; });
+    if (slots) return true;
+    const e = r.edit || {};
+    return (e.main || []).concat(e.opt || []).some(function (alts) { return alts.indexOf(name) >= 0; });
   }
+  K.usesItem = usesItem;
   function personaName() { return (K.S.meta && K.S.meta.persona && K.S.meta.persona.name) || 'กะวอ'; }
 
   async function copyText(text) {

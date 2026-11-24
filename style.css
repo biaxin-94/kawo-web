@@ -268,7 +268,7 @@ button.row { width: 100%; text-align: left; }
   color: var(--text); font-size: 14px; }
 .fchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .findmiss { margin: 6px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.findmiss[hidden], .zone[hidden], .row[hidden], .empty[hidden] { display: none; }
+.findmiss[hidden], .zone[hidden], .row[hidden], .rowwrap[hidden], .empty[hidden] { display: none; }
 .zone.shut.found > .list { display: flex; }
 
 /* ---------- v17.0: action cards (open other flows) vs the find group (filters) ---------- */
@@ -323,3 +323,11 @@ button.row { width: 100%; text-align: left; }
 .chipstep button { border: 0; background: none; color: inherit; font-size: 15px; }
 .chipstep .cs { width: 36px; font-size: 18px; }
 .chipstep .cn { padding: 0 4px; font-weight: 600; }
+
+/* v22.0: a food row + a small 🍳 beside it (menus that use the item), kept apart from the row's own tap */
+.rowwrap { display: flex; align-items: stretch; gap: 8px; }
+.rowwrap > .row { flex: 1; min-width: 0; }
+.cookbtn { flex: 0 0 44px; border: 0; border-radius: 12px; background: var(--card); box-shadow: var(--shadow-card); font-size: 18px; cursor: pointer; }
+.cookbtn:active { background: var(--chip); }
+.unitpick { margin: 6px 0; }
+.usepart { flex-wrap: wrap; }

@@ -31,15 +31,26 @@
     K.sheet(function (close) {
       const can = K.canEdit();
       const word = K.unitWord(it.type, it.unit);
-      const st = can && it.type !== 'flag' && it.qty > 1 ? K.stepper(1, 1, it.qty, word) : null;
+      const split = it.split || K.splits(it.type, it.unit);   // v22.0: ½ / ¼ of a pack, a bag, a head ...
+      const st = can && it.type !== 'flag' && it.qty > 1 ? K.stepper(1, 1, Math.floor(it.qty), word) : null;
       const n = function () { return st ? st.get() : it.qty; };
       const nodes = [
         el('h3', { text: it.name + (K.qtyText(it.type, it.qty, it.unit) ? ' ' + K.qtyText(it.type, it.qty, it.unit) : '') }),
         el('div', { class: 'sub', text: K.locTh(it.loc) + (it.exp ? ' · หมด ' + K.thDate(it.exp) + ' (' + K.leftText(it.left, it.exp) + ')' : '') + (it.added ? ' · ซื้อ ' + K.thDate(it.added) : '') }),
       ];
-      if (st) nodes.push(el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน (มี ' + it.qty + ' ' + word + ')' }), st.node]));
+      // v22.0: ใช้หมด · ใช้ครึ่ง · ใช้ ¼ (of one), even when there is only 1; whole amounts stay on the stepper below
+      if (split && can) {
+        const part = function (label, k) {
+          return k < it.qty ? el('button', { class: 'btn', type: 'button', text: label, on: { click: function () { close(); doAct(it, 'used', null, k); } } }) : null;
+        };
+        nodes.push(el('div', { class: 'btns usepart' }, [
+          el('button', { class: 'btn primary', type: 'button', text: 'ใช้หมด', on: { click: function () { close(); doAct(it, 'used', null, it.qty); } } }),
+          part('ใช้ครึ่ง', 0.5), part('ใช้ ¼', 0.25),
+        ]));
+      }
+      if (st) nodes.push(el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน (มี ' + K.fmtQty(it.qty) + ' ' + word + ')' }), st.node]));
       nodes.push(el('div', { class: 'btns' }, [
-        el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
+        split && !st ? null : el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
         el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { const k = n(); close(); doAct(it, 'toss', null, k); } } }),
       ]));
       const toChill = it.loc !== 'Chill' && K.zoneOn('Chill'), toFreezer = K.zoneOn('Freezer');   // v11.0: zones this household uses
@@ -63,16 +74,17 @@
 
   /** ❄️ move: how many to move (default all), unchanged from v8.0. */
   function askMove(it, dest) {
-    if (it.type === 'flag' || it.qty <= 1) return doAct(it, 'mv', dest, it.qty);
+    if (it.type === 'flag' || it.qty <= 1) return doAct(it, 'mv', dest, it.qty);   // ½ แพ็ค moves whole
     K.sheet(function (close) {
       const word = K.unitWord(it.type, it.unit);
-      const st = K.stepper(it.qty, 1, it.qty, word);
+      const sp = it.split || K.splits(it.type, it.unit);
+      const st = K.stepper(it.qty, sp ? 0.5 : 1, it.qty, word, null, { split: sp });
       return [
         el('h3', { text: 'ย้าย ' + it.name + ' กี่' + word + '?' }),
-        el('div', { class: 'sub', text: 'มี ' + it.qty + ' ' + word + ' → ' + K.locTh(dest) }),
+        el('div', { class: 'sub', text: 'มี ' + K.fmtQty(it.qty) + ' ' + word + ' → ' + K.locTh(dest) }),
         st.node,
         el('div', { class: 'btns' }, [
-          el('button', { class: 'btn', type: 'button', text: 'ทั้งหมด (' + it.qty + ')', on: { click: function () { close(); doAct(it, 'mv', dest, it.qty); } } }),
+          el('button', { class: 'btn', type: 'button', text: 'ทั้งหมด (' + K.fmtQty(it.qty) + ')', on: { click: function () { close(); doAct(it, 'mv', dest, it.qty); } } }),
           el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { close(); doAct(it, 'mv', dest, st.get()); } } }),
         ]),
       ];
@@ -96,10 +108,10 @@
   function freezeCard(h) {
     const can = K.canEdit();
     return el('div', { class: 'banner info' }, [
-      el('div', { text: '❄️ ' + h.name + ' ' + h.total + ' ที่ แต่' + h.locTh + ' เก็บได้ ' + h.days + ' วัน แบ่งแช่ฟรีซ ' + h.freeze + ' ที่ไหม?' }),
+      el('div', { text: '❄️ ' + h.name + ' ' + K.fmtQty(h.total) + ' ' + (h.word || 'ที่') + ' แต่' + h.locTh + ' เก็บได้ ' + h.days + ' วัน แบ่งแช่ฟรีซ ' + K.fmtQty(h.freeze) + ' ' + (h.word || 'ที่') + 'ไหม?' }),
       el('div', { class: 'btns' }, [
         el('button', { class: 'btn small', type: 'button', text: 'ไม่ต้อง', on: { click: function () { dismissed[hintKey(h)] = 1; K.store.set(K.hkey('freezeDismissed'), dismissed); K.render(); } } }),
-        el('button', { class: 'btn small primary', type: 'button', disabled: !can, text: 'แช่ฟรีซ ' + h.freeze + ' ที่',
+        el('button', { class: 'btn small primary', type: 'button', disabled: !can, text: 'แช่ฟรีซ ' + K.fmtQty(h.freeze) + ' ' + (h.word || 'ที่'),
           on: { click: function () { K.write('itemAct', { id: h.id, act: 'mv', dest: 'Freezer', n: h.freeze, expectQty: h.qty }); } } }),
       ]),
     ]);
@@ -165,9 +177,9 @@
     if (on && it.type === 'flag') right = el('span', { class: 'end', text: 'หมด' });
     else if (on && !cook.pending) {
       // v14.0: − at 1 unticks it (not used, it stays in the fridge); ticking again starts back at 1
-      right = K.stepper(Math.min(cook.sel[it.id], it.qty), 1, it.qty, K.unitWord(it.type, it.unit), function (v) { cook.sel[it.id] = v; saveCook(); },
-        { onUnder: function () { delete cook.sel[it.id]; saveCook(); K.render(); } }).node;
-    } else if (on) right = el('span', { class: 'end', text: cook.sel[it.id] + ' ' + K.unitWord(it.type, it.unit) });
+      right = K.stepper(Math.min(cook.sel[it.id], it.qty), it.split ? 0.25 : 1, it.qty, K.unitWord(it.type, it.unit), function (v) { cook.sel[it.id] = v; saveCook(); },
+        { split: !!it.split, onUnder: function () { delete cook.sel[it.id]; saveCook(); K.render(); } }).node;
+    } else if (on) right = el('span', { class: 'end', text: K.fmtQty(cook.sel[it.id]) + ' ' + K.unitWord(it.type, it.unit) });
     const where = K.locTh(it.loc) + (it.left !== null && it.loc !== 'Freezer' && !K.noExp(it.loc) ? ' · ' + K.leftText(it.left, it.exp) : '') + (isOpt ? ' · ของเสริม' : '');
     return el('div', { class: 'row ' + K.fresh(it) + (on ? ' picked' : '') }, [
       el('button', { class: 'check', type: 'button', disabled: !!cook.pending, 'aria-pressed': String(on), 'aria-label': 'ใช้ ' + it.name, text: on ? '✓' : '', on: { click: toggle } }),
@@ -363,7 +375,7 @@
     let shown = 0;
     wrap.querySelectorAll('.zone').forEach(function (sec) {
       let n = 0;
-      sec.querySelectorAll('.row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
+      sec.querySelectorAll('.rowwrap[data-s], .list > .row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
       const empty = sec.querySelector('.list > .empty');
       if (empty) empty.hidden = !!q;
       sec.hidden = !!q && !n;
@@ -404,9 +416,14 @@
   }
 
   function itemCard(i) {
-    return el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, 'data-s': searchText(i), on: { click: function () { openItem(i); } } }, [
+    const row = el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, 'data-s': searchText(i), on: { click: function () { openItem(i); } } }, [
       itemLine(i, true), K.noExp(i.loc) ? null : el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
     ]);
+    if (i.loc === 'Storage') return row;
+    // v22.0: a small 🍳 beside each food row: menus that use it (the ✅ / 🗑 stay in the item's sheet, away from it)
+    return el('div', { class: 'rowwrap', 'data-name': i.name, 'data-s': searchText(i) }, [row,
+      el('button', { class: 'cookbtn', type: 'button', 'aria-label': 'เมนูที่ใช้' + i.name, title: 'ทำเมนูจาก' + i.name, text: '🍳',
+        on: { click: function (e) { e.stopPropagation(); K.openCookFor(i); } } })]);
   }
 
   /** A section: pinned header "🧊 ตู้เย็น (12)" that folds, a light zone tint behind the cards. */
@@ -583,7 +600,7 @@
     const main = el('div', { class: 'main' }, [
       it.name,
       el('span', { class: 'sub', text: rowSub(it) }),
-      changed ? el('span', { class: 'was', text: 'เดิม ' + (it.type === 'flag' ? 'มี' : baseOf(it) + ' ' + word) }) : null,
+      changed ? el('span', { class: 'was', text: 'เดิม ' + (it.type === 'flag' ? 'มี' : K.fmtQty(baseOf(it)) + ' ' + word) }) : null,
     ]);
     let ctl;
     if (it.type === 'flag') {
@@ -593,7 +610,7 @@
       ]);
     } else {
       ctl = el('span', { class: 'ctl' }, [
-        K.stepper(v, 0, 999, word, function (n) { setQty(it, n); }, { label: 'จำนวน ' + it.name }).node,
+        K.stepper(v, 0, 999, word, function (n) { setQty(it, n); }, { label: 'จำนวน ' + it.name, split: !!it.split }).node,
         ' ',
         el('button', { class: 'gonebtn', type: 'button', 'aria-pressed': String(v === 0), text: 'หมด',
           on: { click: function () { setQty(it, v === 0 ? baseOf(it) : 0); } } }),
@@ -624,11 +641,11 @@
   function askSplit(it) {
     const word = K.unitWord(it.type, it.unit);
     K.sheet(function (close) {
-      const st = K.stepper((chk.split || {})[it.id] || 1, 1, it.qty, word, null, { label: 'จำนวนที่ทิ้ง' });
+      const st = K.stepper((chk.split || {})[it.id] || 1, it.split ? 0.25 : 1, it.qty, word, null, { label: 'จำนวนที่ทิ้ง', split: !!it.split });
       return [
         el('h3', { text: 'แบ่ง ' + it.name }),
         el('div', { class: 'sub', text: 'ที่เหลือยังดีอยู่ ใช้ได้อีก ' + (K.S.meta.keepGoodDays || 2) + ' วัน' }),
-        el('div', { class: 'amount' }, [el('span', { text: 'ทิ้ง' }), st.node, el('span', { text: 'จาก ' + it.qty })]),
+        el('div', { class: 'amount' }, [el('span', { text: 'ทิ้ง' }), st.node, el('span', { text: 'จาก ' + K.fmtQty(it.qty) })]),
         el('div', { class: 'btns' }, [
           el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
           el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () {
@@ -683,21 +700,23 @@
   function foundQty(zone, d, fresh) {
     const name = d ? d.name : fresh.name, type = d ? d.type : 'piece', unit = d ? d.unit : '';
     const word = K.unitWord(type, unit);
-    const add = function (n) {
+    const add = function (n, u) {
       chk = chk || newDraft();
-      chk.found.push({ key: K.newReqId().slice(0, 10), name: name, qty: n, zone: zone, cat: fresh ? fresh.cat : undefined,
-        qtyText: type === 'flag' ? K.locTh(zone) : n + ' ' + word + ' · ' + K.locTh(zone) });
+      chk.found.push({ key: K.newReqId().slice(0, 10), name: name, qty: n, zone: zone, cat: fresh ? fresh.cat : undefined, unit: u || undefined,
+        qtyText: type === 'flag' ? K.locTh(zone) : K.fmtQty(n) + ' ' + K.unitWord(type, u || unit) + ' · ' + K.locTh(zone) });
       saveChk(); K.render();
     };
     if (type === 'flag') return add(1);
     K.sheet(function (close) {
-      const st = K.stepper(d && d.defQty > 0 ? d.defQty : 1, 1, 999, word);
+      // v22.0: in one of its buying units; ½ steps when that unit splits
+      const st = K.stepper(d && d.defQty > 0 ? d.defQty : 1, K.splits(type, unit) ? 0.25 : 1, 999, word, null, { split: K.splits(type, unit) });
+      const pick = K.unitPicker(d ? d.units : [], unit, function (u) { st.setUnit(K.unitWord(type, u), K.splits(type, u)); });
       return [
-        el('h3', { text: name + ' กี่' + word + '?' }), el('div', { class: 'sub', text: K.locTh(zone) }),
+        el('h3', { text: name + ' เท่าไหร่?' }), el('div', { class: 'sub', text: K.locTh(zone) }), pick.node,
         el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน' }), st.node]),
         el('div', { class: 'btns' }, [
           el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
-          el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { const n = st.get(); close(); add(n); } } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { const n = st.get(); close(); add(n, pick.get()); } } }),
         ]),
       ];
     });
@@ -807,7 +826,7 @@
     const payload = {
       expired: Object.keys(chk.exp).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], act: chk.exp[id], toss: chk.exp[id] === 'split' ? chk.split[id] : undefined }; }),
       changes: Object.keys(chk.now).filter(itemById).map(function (id) { return { id: id, was: chk.base[id], now: chk.now[id], why: chk.why[id] || 'unsure' }; }),
-      found: chk.found.map(function (f) { return { name: f.name, qty: f.qty, zone: f.zone, cat: f.cat }; }),
+      found: chk.found.map(function (f) { return { name: f.name, qty: f.qty, zone: f.zone, cat: f.cat, unit: f.unit }; }),
       seen: K.S.items.map(function (i) { return i.id; }),
     };
     chk.pending = { reqId: K.newReqId(), hh: K.hid, payload: payload };

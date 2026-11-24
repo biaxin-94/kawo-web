@@ -17,7 +17,8 @@
     shop = K.store.get(KEY, null) || {};
     shop.mode = shop.mode || 'plan';
     shop.picks = shop.picks || {};       // name -> qty picked in the store
-    shop.extras = shop.extras || [];     // [{name, qty}] bought but not on the list
+    shop.extras = shop.extras || [];     // [{name, qty, unit}] bought but not on the list
+    shop.units = shop.units || {};       // v22.0: name -> unit picked in the store (when not the list's unit)
     shop.pending = shop.pending || null; // {reqId, payload, at, hh}
   }
   loadShop();
@@ -28,31 +29,43 @@
   const can = function () { return K.canEdit(); };
   const defQty = function (name) { const d = K.dictEntry(name); return d && d.defQty > 0 ? d.defQty : 1; };
   const typeOf = function (name) { const d = K.dictEntry(name); return d ? { type: d.type, unit: d.unit } : { type: 'piece', unit: '' }; };
-  const label = function (name, qty) { const t = typeOf(name); const q = K.qtyText(t.type, qty, t.unit); return name + (q ? ' ' + q : ''); };
+  const label = function (name, qty, unit) { const t = typeOf(name); const q = K.qtyText(t.type, qty, unit || t.unit); return name + (q ? ' ' + q : ''); };
+
+  /**
+   * v22.0 (Idea E): amount + unit in one block: unit chips (only when the item has 2+ buying units) above a stepper
+   * that steps ½ for units that split. Returns {nodes, qty(), unit()}.
+   */
+  function amountBox(type, units, unit, qty) {
+    units = units && units.length ? units : (unit ? [unit] : []);
+    unit = unit || units[0] || '';
+    const st = K.stepper(qty, K.splits(type, unit) ? 0.25 : 1, 999, K.unitWord(type, unit), null, { split: K.splits(type, unit) });
+    const pick = K.unitPicker(units, unit, function (u) { st.setUnit(K.unitWord(type, u), K.splits(type, u)); });
+    return { nodes: [pick.node, st.node], qty: st.get, unit: pick.get };
+  }
 
   /* ---------------- plan mode: edit the list ---------------- */
   function addToList() {
     K.pickItem('เพิ่มในรายการซื้อ', function (d) {
       if (d.type === 'flag') return K.write('listAdd', { name: d.name });
       K.sheet(function (close) {
-        const st = K.stepper(d.defQty > 0 ? d.defQty : 1, 1, 999, K.unitWord(d.type, d.unit));
-        return [el('h3', { text: d.name }), el('div', { class: 'sub', text: 'ซื้อเท่าไหร่?' }), st.node,
-          el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ใส่รายการ', on: { click: function () { close(); K.write('listAdd', { name: d.name, qty: st.get() }); } } })])];
+        const box = amountBox(d.type, d.units, d.unit, d.defQty > 0 ? d.defQty : 1);
+        return [el('h3', { text: d.name }), el('div', { class: 'sub', text: 'ซื้อเท่าไหร่?' })].concat(box.nodes, [
+          el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ใส่รายการ', on: { click: function () { close(); K.write('listAdd', { name: d.name, qty: box.qty(), unit: box.unit() }); } } })])]);
       });
     });
   }
 
   function editRow(r) {
     K.sheet(function (close) {
-      const st = r.type === 'flag' ? null : K.stepper(r.qty, 1, 999, K.unitWord(r.type, r.unit));
+      const st = r.type === 'flag' ? null : amountBox(r.type, r.units, r.unit, r.qty);
       return [
         el('h3', { text: r.name }), el('div', { class: 'sub', text: r.catTh }),
-        st ? st.node : null,
+      ].concat(st ? st.nodes : [], [
         el('div', { class: 'btns' }, [
           el('button', { class: 'btn danger', type: 'button', disabled: !can(), text: 'เอาออก', on: { click: function () { close(); K.write('listRemove', { name: r.name }); } } }),
-          st ? el('button', { class: 'btn primary', type: 'button', disabled: !can(), text: 'บันทึก', on: { click: function () { close(); K.write('listSetQty', { name: r.name, qty: st.get() }); } } }) : null,
+          st ? el('button', { class: 'btn primary', type: 'button', disabled: !can(), text: 'บันทึก', on: { click: function () { close(); K.write('listSetQty', { name: r.name, qty: st.qty(), unit: st.unit() }); } } }) : null,
         ]),
-      ];
+      ]);
     });
   }
 
@@ -77,15 +90,15 @@
   function stockLines() {
     const have = {};
     K.S.items.forEach(function (i) {
-      const h = have[i.name] || (have[i.name] = { qty: 0, type: i.type, unit: i.unit, left: null, exp: null });
-      h.qty += Number(i.qty) || 0;
+      const h = have[i.name] || (have[i.name] = { rows: [], type: i.type, left: null, exp: null });
+      h.rows.push(i);   // v22.0: kept per unit ("มีอยู่ 1 แพ็ค + ½ กก."), never added across units
       if (!K.noExp(i.loc) && i.left !== null && i.left !== undefined && (h.left === null || i.left < h.left)) { h.left = i.left; h.exp = i.exp; }
     });
     const today = Date.parse(K.S.meta.today + 'T00:00:00Z');
     return function (r) {
       const h = have[r.name];
       if (h) {
-        const amount = h.type === 'flag' ? 'มีอยู่' : 'มีอยู่ ' + h.qty + ' ' + K.unitWord(h.type, h.unit);
+        const amount = h.type === 'flag' ? 'มีอยู่' : 'มีอยู่ ' + K.stockText(h.rows);
         return amount + (h.left !== null ? ' · ' + K.leftText(h.left, h.exp) : '');
       }
       if (!r.gone) return '';
@@ -112,7 +125,7 @@
   /* ---------------- store mode: pick ---------------- */
   function togglePick(r) {
     if (!can()) return;
-    if (shop.picks[r.name] !== undefined) delete shop.picks[r.name];
+    if (shop.picks[r.name] !== undefined) { delete shop.picks[r.name]; delete shop.units[r.name]; }
     else shop.picks[r.name] = r.qty;
     save(); K.render();
   }
@@ -120,23 +133,28 @@
   function editPick(r) {
     if (r.type === 'flag') return togglePick(r);
     K.sheet(function (close) {
-      const st = K.stepper(shop.picks[r.name] !== undefined ? shop.picks[r.name] : r.qty, 1, 999, K.unitWord(r.type, r.unit));
-      return [el('h3', { text: 'หยิบ ' + r.name + ' เท่าไหร่?' }), el('div', { class: 'sub', text: 'ในรายการ ' + K.qtyText(r.type, r.qty, r.unit) }), st.node,
-        el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'หยิบแล้ว', on: { click: function () { shop.picks[r.name] = st.get(); save(); close(); K.render(); } } })])];
+      const box = amountBox(r.type, r.units, shop.units[r.name] || r.unit, shop.picks[r.name] !== undefined ? shop.picks[r.name] : r.qty);
+      return [el('h3', { text: 'หยิบ ' + r.name + ' เท่าไหร่?' }), el('div', { class: 'sub', text: 'ในรายการ ' + K.qtyText(r.type, r.qty, r.unit) })].concat(box.nodes, [
+        el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'หยิบแล้ว', on: { click: function () {
+          shop.picks[r.name] = box.qty();
+          if (box.unit() && box.unit() !== r.unit) shop.units[r.name] = box.unit(); else delete shop.units[r.name];
+          save(); close(); K.render();
+        } } })])]);
     });
   }
 
   function addExtra() {
     K.pickItem('ซื้อเพิ่ม (นอกรายการ)', function (d) {
-      const go = function (qty) {
-        const ex = shop.extras.filter(function (x) { return x.name === d.name; })[0];
-        if (ex) ex.qty += qty; else shop.extras.push({ name: d.name, qty: qty });
+      const go = function (qty, unit) {
+        unit = unit || d.unit || '';
+        const ex = shop.extras.filter(function (x) { return x.name === d.name && (x.unit || d.unit || '') === unit; })[0];
+        if (ex) ex.qty += qty; else shop.extras.push({ name: d.name, qty: qty, unit: unit });
         save(); K.render();
       };
       if (d.type === 'flag') return go(1);
       K.sheet(function (close) {
-        const st = K.stepper(d.defQty > 0 ? d.defQty : 1, 1, 999, K.unitWord(d.type, d.unit));
-        return [el('h3', { text: d.name }), st.node, el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { close(); go(st.get()); } } })])];
+        const box = amountBox(d.type, d.units, d.unit, d.defQty > 0 ? d.defQty : 1);
+        return [el('h3', { text: d.name })].concat(box.nodes, [el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { close(); go(box.qty(), box.unit()); } } })])]);
       });
     });
   }
@@ -150,10 +168,10 @@
     grouped(list, function (r) {
       const picked = shop.picks[r.name] !== undefined;
       const sl = line(r);
-      const q = picked ? shop.picks[r.name] : r.qty;
+      const q = picked ? shop.picks[r.name] : r.qty, qu = picked && shop.units[r.name] ? shop.units[r.name] : r.unit;
       return el('div', { class: 'row nodate' + (picked ? ' picked' : '') }, [
         el('button', { class: 'check', type: 'button', disabled: !can(), 'aria-pressed': String(picked), 'aria-label': 'หยิบ ' + r.name, text: picked ? '✓' : '', on: { click: function () { togglePick(r); } } }),
-        el('div', { class: 'main', on: { click: function () { togglePick(r); } } }, [r.name, K.qtyText(r.type, q, r.unit) ? el('span', { class: 'qty', text: K.qtyText(r.type, q, r.unit) }) : null,
+        el('div', { class: 'main', on: { click: function () { togglePick(r); } } }, [r.name, K.qtyText(r.type, q, qu) ? el('span', { class: 'qty', text: K.qtyText(r.type, q, qu) }) : null,
           sl ? el('span', { class: 'sub stockline', text: sl }) : null]),
         r.type !== 'flag' ? el('button', { class: 'pill', type: 'button', disabled: !can(), text: '✏️', 'aria-label': 'แก้จำนวน ' + r.name, on: { click: function () { editPick(r); } } }) : null,
       ]);
@@ -162,27 +180,30 @@
     wrap.appendChild(K.group('➕ ซื้อเพิ่ม (นอกรายการ)', shop.extras.length ? shop.extras.map(function (x, i) {
       return el('div', { class: 'row nodate picked' }, [
         el('span', { class: 'check', text: '✓' }),
-        el('div', { class: 'main', text: label(x.name, x.qty) }),
+        el('div', { class: 'main', text: label(x.name, x.qty, x.unit) }),
         el('button', { class: 'pill', type: 'button', text: 'เอาออก', on: { click: function () { shop.extras.splice(i, 1); save(); K.render(); } } }),
       ]);
     }) : [el('div', { class: 'empty', text: 'ยังไม่มี' })]));
     wrap.appendChild(el('div', { class: 'btns' }, [el('button', { class: 'btn', type: 'button', disabled: !can(), text: '+ ซื้อเพิ่ม', on: { click: addExtra } })]));
     wrap.appendChild(el('div', { class: 'pad-bottom' }));
     wrap.appendChild(el('div', { class: 'storebar' }, [
-      el('button', { class: 'btn', type: 'button', disabled: !pickedN, text: 'ล้างติ๊ก', on: { click: function () { K.confirmSheet('ล้างติ๊กทั้งหมด?', 'ของที่ติ๊กไว้จะกลับเป็นยังไม่ได้หยิบ', 'ล้าง', function () { shop.picks = {}; shop.extras = []; save(); K.render(); }, true); } } }),
+      el('button', { class: 'btn', type: 'button', disabled: !pickedN, text: 'ล้างติ๊ก', on: { click: function () { K.confirmSheet('ล้างติ๊กทั้งหมด?', 'ของที่ติ๊กไว้จะกลับเป็นยังไม่ได้หยิบ', 'ล้าง', function () { shop.picks = {}; shop.units = {}; shop.extras = []; save(); K.render(); }, true); } } }),
       el('button', { class: 'btn primary', type: 'button', disabled: !pickedN || !can() || !!shop.pending, text: 'ยืนยัน (' + pickedN + ')', on: { click: confirmScreen } }),
     ]));
   }
 
   /* ---------------- confirm + send ---------------- */
   function confirmScreen() {
-    const picks = Object.keys(shop.picks).map(function (n) { return { name: n, qty: shop.picks[n] }; });
+    const picks = Object.keys(shop.picks).map(function (n) { return shop.units[n] ? { name: n, qty: shop.picks[n], unit: shop.units[n] } : { name: n, qty: shop.picks[n] }; });
     const notPicked = K.S.list.filter(function (r) { return shop.picks[r.name] === undefined; });
     const all = picks.concat(shop.extras);
     K.sheet(function (close) {
       return [
         el('h3', { text: '🧊 เข้าตู้ ' + all.length + ' รายการ' }),
-        el('div', { class: 'list' }, all.map(function (p) { return el('div', { class: 'row' }, [el('div', { class: 'main', text: label(p.name, p.qty) })]); })),
+        el('div', { class: 'list' }, all.map(function (p) {
+          const r = K.S.list.filter(function (x) { return x.name === p.name; })[0];
+          return el('div', { class: 'row' }, [el('div', { class: 'main', text: label(p.name, p.qty, p.unit || (r && r.unit)) })]);
+        })),
         notPicked.length ? el('div', { class: 'banner warn' }, [
           el('b', { text: '⚠️ ยังไม่ได้หยิบ ' + notPicked.length + ' อย่าง: ' }),
           notPicked.map(function (r) { return r.name; }).join(', '),
@@ -211,7 +232,7 @@
     const here = s === shop && hh === K.hid;
     if (res.ok) {
       const sentPicks = s.pending.payload.picks.map(function (p) { return p.name; });
-      sentPicks.forEach(function (n) { delete s.picks[n]; });
+      sentPicks.forEach(function (n) { delete s.picks[n]; delete s.units[n]; });
       s.extras = [];
       s.pending = null;
       s.mode = 'plan';

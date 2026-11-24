@@ -103,7 +103,9 @@
       if (!res.ok) { btn.disabled = false; btn.textContent = 'เพิ่ม'; K.toast(K.errorText(res), true); return; }
       (res.data.items || []).forEach(function (x) { add(zone, { name: x.name, qty: x.qty, cat: x.cat, type: x.type, unit: x.unit, isNew: !x.known }); });
       const fresh = (res.data.items || []).filter(function (x) { return !x.known; }).length;
-      K.toast('เพิ่ม ' + res.data.items.length + ' อย่าง' + (fresh ? ' (ของใหม่ ' + fresh + ')' : ''));
+      // v21.1: "ไข่ 1 แผง" comes back in ฟอง: say so, the person fixes the count with the stepper
+      const notes = (res.data.items || []).filter(function (x) { return x.note; }).map(function (x) { return x.name + ': ' + x.note; });
+      K.toast('เพิ่ม ' + res.data.items.length + ' อย่าง' + (fresh ? ' (ของใหม่ ' + fresh + ')' : '') + (notes.length ? '\n' + notes.join('\n') : ''), !!notes.length);
       K.render();
     };
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
@@ -206,7 +208,7 @@
   }
 
   function freeze() {
-    const items = st.order.map(function (k) { const x = st.sel[k]; return { name: x.name, qty: x.qty, zone: x.zone, cat: x.isNew ? x.cat : undefined }; });
+    const items = st.order.map(function (k) { const x = st.sel[k]; return { name: x.name, qty: x.qty, zone: x.zone, cat: x.isNew ? x.cat : undefined, unit: x.isNew && x.unit ? x.unit : undefined }; });
     st.pending = { reqId: K.newReqId(), hh: K.hid, payload: { items: items } };
     save();
   }

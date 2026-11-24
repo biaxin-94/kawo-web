@@ -170,7 +170,7 @@
     const on = cook.sel[it.id] !== undefined;
     const toggle = function () {
       if (cook.pending) return;
-      if (on) delete cook.sel[it.id]; else cook.sel[it.id] = it.type === 'flag' ? it.qty : 1;
+      if (on) delete cook.sel[it.id]; else cook.sel[it.id] = it.type === 'flag' ? it.qty : it.split ? Math.min(0.5, it.qty) : 1;   // v22.0: ½ of a pack / kilo by default
       saveCook(); K.render();
     };
     let right = null;

@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '20.1';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '22.1';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -58,9 +58,38 @@
   K.thDate = function (ymd) { if (!ymd) return ''; const p = String(ymd).split('-'); return Number(p[2]) + ' ' + TH_MONTHS[Number(p[1]) - 1]; };
   K.qtyText = function (type, qty, unit) {
     if (type === 'flag') return '';
-    if (type === 'serving') return qty + ' ที่';
-    if (unit) return qty + ' ' + unit;
-    return qty > 1 ? '×' + qty : '';
+    if (type === 'serving') return K.fmtQty(qty) + ' ที่';
+    if (unit) return K.fmtQty(qty) + ' ' + unit;
+    return qty > 1 ? '×' + K.fmtQty(qty) : qty < 1 ? K.fmtQty(qty) : '';
+  };
+  /** v22.0: 0.5 -> "½", 1.25 -> "1¼" (same as the server's fmtQty). */
+  K.fmtQty = function (n) {
+    n = Number(n) || 0;
+    const whole = Math.floor(n + 1e-9), part = Math.round((n - whole) * 4), f = ['', '¼', '½', '¾'][part] || '';
+    return f ? (whole ? String(whole) : '') + f : String(Math.round(n * 100) / 100);
+  };
+  /** v22.0 (Idea E): units that may be ½ / ¼ (same list as the server's WHOLE_UNITS). */
+  const WHOLE_UNITS = ['ชิ้น', 'ฟอง', 'ซอง', 'กระป๋อง', 'ตัว', 'อัน', 'ที่'];
+  K.splits = function (type, unit) { return type !== 'flag' && type !== 'serving' && !!unit && WHOLE_UNITS.indexOf(unit) < 0; };
+  /** Rows of one item as text per unit: "1 แพ็ค + ½ กก." (never added across units). */
+  K.stockText = function (rows) {
+    const by = {}, order = [];
+    rows.forEach(function (r) { const w = K.unitWord(r.type, r.unit); if (!(w in by)) { by[w] = 0; order.push(w); } by[w] += Number(r.qty) || 0; });
+    return order.map(function (w) { return K.fmtQty(by[w]) + ' ' + w; }).join(' + ');
+  };
+  /**
+   * v22.0: chips to pick one of an item's buying units ("แพ็ค | กก. | ชิ้น"). Returns {node, get()}; node is null
+   * when the item has only one unit (nothing to pick).
+   */
+  K.unitPicker = function (units, current, onChange) {
+    let cur = current || (units || [])[0] || '';
+    if (!units || units.length < 2) return { node: null, get: function () { return cur; } };
+    const btns = units.map(function (u) {
+      return el('button', { type: 'button', class: 'fchip', 'aria-pressed': String(u === cur), text: u, on: { click: function () {
+        cur = u; btns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.textContent === cur)); }); if (onChange) onChange(u);
+      } } });
+    });
+    return { node: el('div', { class: 'fchips unitpick', role: 'group', 'aria-label': 'หน่วย' }, btns), get: function () { return cur; } };
   };
   K.unitWord = function (type, unit) { return type === 'serving' ? 'ที่' : (unit || 'ชิ้น'); };
   K.leftText = function (left, exp) {
@@ -299,8 +328,9 @@
    */
   K.stepper = function (value, min, max, unit, onChange, opts) {
     opts = opts || {};
-    const input = el('input', { type: 'number', inputmode: 'numeric', min: min, max: max, value: value, 'aria-label': opts.label || 'จำนวน' });
-    const clamp = function (v) { v = Math.round(Number(v)); if (!isFinite(v)) v = min; return Math.max(min, Math.min(max, v)); };
+    // v22.0 opts.split: ½ steps for units that split (a typed ¼ is kept: amounts round to ¼)
+    const input = el('input', { type: 'number', inputmode: opts.split ? 'decimal' : 'numeric', min: min, max: max, step: opts.split ? 0.25 : 1, value: value, 'aria-label': opts.label || 'จำนวน' });
+    const clamp = function (v) { v = opts.split ? Math.round(Number(v) * 4) / 4 : Math.round(Number(v)); if (!isFinite(v)) v = min; return Math.max(min, Math.min(max, v)); };
     const set = function (v) {
       if (Number(v) < min && opts.onUnder) { opts.onUnder(); return; }
       input.value = clamp(v); if (onChange) onChange(Number(input.value));
@@ -308,12 +338,14 @@
     input.addEventListener('change', function () { set(input.value === '' ? min : input.value); });
     input.addEventListener('focus', function () { try { input.select(); } catch (e) { /* ignore */ } });
     const node = el('span', { class: 'stepper' }, [
-      el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - 1); } } }),
+      el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - (opts.split ? 0.5 : 1)); } } }),
       input,
       unit ? el('span', { class: 'u', text: unit }) : null,
-      el('button', { type: 'button', 'aria-label': 'เพิ่ม', text: '+', on: { click: function () { set(Number(input.value) + 1); } } }),
+      el('button', { type: 'button', 'aria-label': 'เพิ่ม', text: '+', on: { click: function () { set(Number(input.value) + (opts.split ? 0.5 : 1)); } } }),
     ]);
-    return { node: node, get: function () { return clamp(input.value); } };
+    const unitEl = node.querySelector ? node.querySelector('.u') : null;
+    return { node: node, get: function () { return clamp(input.value); },
+      setUnit: function (u, split) { if (unitEl) unitEl.textContent = u; opts.split = split; } };
   };
 
   /** Pick a Dictionary item (search by name or alias). onPick(entry); onCancel() if closed without picking. */

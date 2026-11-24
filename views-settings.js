@@ -89,17 +89,18 @@
       const loc = select([{ v: '', t: 'ตามประเภท' }].concat(meta.locs.filter(function (l) { return l.on !== false || l.id === d.loc; })
         .map(function (l) { return { v: l.id, t: l.icon + ' ' + l.th }; })), d.loc);
       const type = select(meta.types.map(function (t) { return { v: t.id, t: t.th }; }), d.type);
-      const unit = el('input', { value: d.unit, maxlength: '12', placeholder: 'เช่น ฟอง กล่อง หัว' });
+      // v22.0 (Idea E): 1-4 buying units, the first one is the usual one ("แพ็ค, กก., ชิ้น")
+      const unit = el('input', { value: (d.units && d.units.length ? d.units : (d.unit ? [d.unit] : [])).join(', '), maxlength: '60', placeholder: 'เช่น แพ็ค, กก., ชิ้น' });
       const defQty = numInput(d.defQty, '1');
       const fridge = numInput(d.fridge, 'ตามประเภท'), chill = numInput(d.chill, '-'), freezer = numInput(d.freezer, 'ไม่แช่');
       const pantry = numInput(d.pantry, 'เท่าตู้เย็น');
-      const unitField = field('หน่วย (ชิ้น)', unit), defField = field('จำนวนปกติ (ไม่ใส่ตัวเลข = เท่านี้)', defQty);
-      const sync = function () { unitField.hidden = type.value !== 'piece'; defField.hidden = type.value === 'flag'; };
+      const unitField = field('หน่วยที่ซื้อ (ตัวแรก = ปกติ)', unit), defField = field('จำนวนปกติ (ไม่ใส่ตัวเลข = เท่านี้)', defQty);
+      const sync = function () { unitField.hidden = type.value === 'serving'; defField.hidden = type.value === 'flag'; };
       type.addEventListener('change', sync); sync();
       const save = function () {
         close();
         K.write('dictSave', { row: isNew ? null : d.row, name: name.value.trim(), aliases: aliases.value, cat: cat.value, loc: loc.value, type: type.value,
-          unit: unit.value, defQty: defQty.value, fridge: fridge.value, chill: chill.value, freezer: freezer.value, pantry: pantry.value });
+          units: unit.value, defQty: defQty.value, fridge: fridge.value, chill: chill.value, freezer: freezer.value, pantry: pantry.value });
       };
       return [
         el('h3', { text: isNew ? 'เพิ่มของใหม่' : d.name }),
@@ -135,7 +136,7 @@
       box.replaceChildren(
         reviewN ? el('div', { class: 'banner warn', text: '🆕 ' + her() + 'เพิ่มของใหม่จากเมนู ' + reviewN + ' อย่าง แตะเพื่อตรวจวันหมดอายุ หน่วย และที่เก็บ แล้วกดบันทึก' }) : el('span'),
         K.group('ของ (' + list.length + ')', list.slice(0, 150).map(function (d) {
-          const bits = [K.catTh(d.cat), d.loc ? K.locTh(d.loc) : 'ตามประเภท', typeTh[d.type] + (d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
+          const bits = [K.catTh(d.cat), d.loc ? K.locTh(d.loc) : 'ตามประเภท', typeTh[d.type] + (d.units && d.units.length ? ' (' + d.units.join(', ') + ')' : d.unit ? ' (' + d.unit + ')' : '') + (d.defQty ? ' ปกติ ' + d.defQty : '')];
           return el('button', { class: 'row' + (d.review ? ' soon' : ''), type: 'button', on: { click: function () { dictForm(d); } } }, [
             el('div', { class: 'main' }, [d.name, d.review ? el('span', { class: 'tag', text: ' 🆕 ต้องตรวจ' }) : null, el('span', { class: 'sub', text: bits.join(' · ') })]),
             el('span', { class: 'end', text: '✏️' }),

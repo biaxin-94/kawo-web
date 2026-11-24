@@ -37,22 +37,31 @@
   /* ---- the draft ---- */
   function add(zone, x) {
     const s = draft(), k = keyOf(zone, x.name);
-    if (s.sel[k]) { if (x.qty > 1 && x.type !== 'flag') s.sel[k].qty = Math.min(999, x.qty); }
-    else { s.sel[k] = { name: x.name, qty: x.type === 'flag' ? 1 : Math.max(1, x.qty || 1), zone: zone, cat: x.cat, type: x.type || 'piece', unit: x.unit || '', isNew: !!x.isNew }; s.order.push(k); }
+    if (s.sel[k]) { if (x.qty > 1 && x.type !== 'flag') s.sel[k].qty = Math.min(999, x.qty); if (x.unit) s.sel[k].unit = x.unit; }
+    else {
+      s.sel[k] = { name: x.name, qty: x.type === 'flag' ? 1 : Math.max(0.25, x.qty || 1), zone: zone, cat: x.cat, type: x.type || 'piece', unit: x.unit || '',
+        units: x.units || (x.unit ? [x.unit] : []), isNew: !!x.isNew };   // v22.0: its buying units (chips to pick one)
+      s.order.push(k);
+    }
     save();
   }
   function remove(k) { const s = draft(); delete s.sel[k]; s.order = s.order.filter(function (x) { return x !== k; }); save(); }
-  function fromDict(d) { return { name: d.name, qty: 1, cat: d.cat, type: d.type, unit: d.unit }; }
+  function fromDict(d) { return { name: d.name, qty: 1, cat: d.cat, type: d.type, unit: d.unit, units: d.units }; }
 
   /* ---- one zone ---- */
   function chosenRow(k) {
     const x = st.sel[k], word = K.unitWord(x.type, x.unit);
     const right = x.type === 'flag'
       ? el('button', { class: 'btn small', type: 'button', 'aria-label': 'เอา ' + x.name + ' ออก', text: '✕', on: { click: function () { remove(k); K.render(); } } })
-      : K.stepper(x.qty, 1, 999, word, function (v) { x.qty = v; save(); }, { label: 'จำนวน ' + x.name, onUnder: function () { remove(k); K.render(); } }).node;
+      : K.stepper(x.qty, K.splits(x.type, x.unit) ? 0.25 : 1, 999, word, function (v) { x.qty = v; save(); },
+        { label: 'จำนวน ' + x.name, split: K.splits(x.type, x.unit), onUnder: function () { remove(k); K.render(); } }).node;
+    // v22.0: an item with several buying units gets chips under its name ("แพ็ค | กก. | ชิ้น")
+    const pick = x.type === 'flag' ? { node: null } : K.unitPicker(x.units, x.unit, function (u) {
+      x.unit = u; if (!K.splits(x.type, u)) x.qty = Math.max(1, Math.round(x.qty)); save(); K.render();
+    });
     return el('div', { class: 'row ck changed' }, [
       el('div', { class: 'main' }, [x.name, x.isNew ? el('span', { class: 'newtag', text: 'ใหม่' }) : null,
-        el('span', { class: 'sub', text: x.isNew ? K.catTh(x.cat) + ' · ไว้ตรวจทีหลังใน ตั้งค่า › ของ' : K.catTh(x.cat) })]),
+        el('span', { class: 'sub', text: x.isNew ? K.catTh(x.cat) + ' · ไว้ตรวจทีหลังใน ตั้งค่า › ของ' : K.catTh(x.cat) }), pick.node]),
       right,
     ]);
   }
@@ -74,7 +83,7 @@
     const set = function (v) { if (v < 1) return out(); x.qty = Math.min(999, v); save(); K.render(); };
     return el('span', { class: 'chipstep', role: 'group', 'aria-label': d.name }, [
       el('button', { type: 'button', class: 'cs', 'aria-label': 'ลด ' + d.name, text: '−', on: { click: function () { set(x.qty - 1); } } }),
-      el('button', { type: 'button', class: 'cn', 'aria-label': 'เอา ' + d.name + ' ออก', text: d.name + ' ' + x.qty + ' ' + word, on: { click: out } }),
+      el('button', { type: 'button', class: 'cn', 'aria-label': 'เอา ' + d.name + ' ออก', text: d.name + ' ' + K.fmtQty(x.qty) + ' ' + word, on: { click: out } }),
       el('button', { type: 'button', class: 'cs', 'aria-label': 'เพิ่ม ' + d.name, text: '+', on: { click: function () { set(x.qty + 1); } } }),
     ]);
   }
@@ -101,9 +110,11 @@
       const res = await K.call('setupParse', { text: text, zone: zone });
       parsing = false;
       if (!res.ok) { btn.disabled = false; btn.textContent = 'เพิ่ม'; K.toast(K.errorText(res), true); return; }
-      (res.data.items || []).forEach(function (x) { add(zone, { name: x.name, qty: x.qty, cat: x.cat, type: x.type, unit: x.unit, isNew: !x.known }); });
+      (res.data.items || []).forEach(function (x) { add(zone, { name: x.name, qty: x.qty, cat: x.cat, type: x.type, unit: x.unit, units: x.units, isNew: !x.known }); });
       const fresh = (res.data.items || []).filter(function (x) { return !x.known; }).length;
-      K.toast('เพิ่ม ' + res.data.items.length + ' อย่าง' + (fresh ? ' (ของใหม่ ' + fresh + ')' : ''));
+      // v21.1: "ไข่ 1 แผง" comes back in ฟอง: say so, the person fixes the count with the stepper
+      const notes = (res.data.items || []).filter(function (x) { return x.note; }).map(function (x) { return x.name + ': ' + x.note; });
+      K.toast('เพิ่ม ' + res.data.items.length + ' อย่าง' + (fresh ? ' (ของใหม่ ' + fresh + ')' : '') + (notes.length ? '\n' + notes.join('\n') : ''), !!notes.length);
       K.render();
     };
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
@@ -193,7 +204,7 @@
         const mine = st.order.filter(function (k) { return st.sel[k].zone === z; }).map(function (k) { return st.sel[k]; });
         if (!mine.length) return;
         nodes.push(el('div', { class: 'sumline' }, [el('b', { text: zoneTitle(z) + ': ' }),
-          mine.map(function (x) { return x.name + (x.type === 'flag' ? '' : ' ' + x.qty + (x.type === 'serving' ? ' ที่' : x.unit ? ' ' + x.unit : '')) + (x.isNew ? ' (ใหม่)' : ''); }).join(', ')]));
+          mine.map(function (x) { return x.name + (x.type === 'flag' ? '' : ' ' + K.fmtQty(x.qty) + (x.type === 'serving' ? ' ที่' : x.unit ? ' ' + x.unit : '')) + (x.isNew ? ' (ใหม่)' : ''); }).join(', ')]));
       });
       nodes.push(el('p', { class: 'hint', text: 'ของที่มีวันหมดอายุ ตั้งไว้ครึ่งหนึ่งของปกติก่อน เพราะไม่รู้ว่าซื้อมาเมื่อไร (ขึ้นป้าย "ไม่ทราบวันซื้อ" จนกว่าจะเช็กของ)' +
         (fresh ? ' · ของใหม่ ' + fresh + ' อย่าง ตรวจทีหลังได้ใน ตั้งค่า › ของ' : '') }));
@@ -206,7 +217,7 @@
   }
 
   function freeze() {
-    const items = st.order.map(function (k) { const x = st.sel[k]; return { name: x.name, qty: x.qty, zone: x.zone, cat: x.isNew ? x.cat : undefined }; });
+    const items = st.order.map(function (k) { const x = st.sel[k]; return { name: x.name, qty: x.qty, zone: x.zone, cat: x.isNew ? x.cat : undefined, unit: x.unit || undefined }; });
     st.pending = { reqId: K.newReqId(), hh: K.hid, payload: { items: items } };
     save();
   }

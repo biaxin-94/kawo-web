@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '22.1';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '22.2';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -69,7 +69,7 @@
     return f ? (whole ? String(whole) : '') + f : String(Math.round(n * 100) / 100);
   };
   /** v22.0 (Idea E): units that may be ½ / ¼ (same list as the server's WHOLE_UNITS). */
-  const WHOLE_UNITS = ['ชิ้น', 'ฟอง', 'ซอง', 'กระป๋อง', 'ตัว', 'อัน', 'ที่'];
+  const WHOLE_UNITS = ['ชิ้น', 'ฟอง', 'ซอง', 'ตัว', 'อัน', 'ที่'];
   K.splits = function (type, unit) { return type !== 'flag' && type !== 'serving' && !!unit && WHOLE_UNITS.indexOf(unit) < 0; };
   /** Rows of one item as text per unit: "1 แพ็ค + ½ กก." (never added across units). */
   K.stockText = function (rows) {

@@ -49,9 +49,9 @@
         ]));
       }
       if (st) nodes.push(el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน (มี ' + K.fmtQty(it.qty) + ' ' + word + ')' }), st.node]));
-      nodes.push(el('div', { class: 'btns' }, [
-        split && !st ? null : el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
-        el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { const k = n(); close(); doAct(it, 'toss', null, k); } } }),
+      // v23.1: ✅ ใช้ is one big button; 🗑 ทิ้ง sits alone at the bottom behind a confirm (testers marked used, then tossed)
+      if (!(split && !st)) nodes.push(el('div', { class: 'btns' }, [
+        el('button', { class: 'btn primary big', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
       ]));
       const toChill = it.loc !== 'Chill' && K.zoneOn('Chill'), toFreezer = K.zoneOn('Freezer');   // v11.0: zones this household uses
       if (!K.noExp(it.loc) && it.loc !== 'Freezer' && (toChill || toFreezer)) {
@@ -67,6 +67,13 @@
         nodes.push(el('div', { class: 'btns' }, [el('button', { class: 'btn' + (soon ? ' soft' : ''), type: 'button', text: '🍳 ทำเมนูจากของนี้',
           on: { click: function () { close(); K.openCookFor(it); } } })]));
       }
+      nodes.push(el('div', { class: 'btns tossrow' }, [
+        el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () {
+          const k = n();
+          close();
+          K.confirmSheet('ทิ้ง ' + it.name + ' ' + (K.qtyText(it.type, k, it.unit) || '') + ' ใช่ไหม?', 'ถ้ากดผิด กดเลิกทำได้ทันที', '🗑 ทิ้ง', function () { doAct(it, 'toss', null, k); }, true);
+        } } }),
+      ]));
       if (!can) nodes.push(el('p', { class: 'hint', text: 'ดูอย่างเดียว: แก้ไขไม่ได้' }));
       return nodes;
     });

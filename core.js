@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '23.0';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '23.1';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -414,17 +414,32 @@
       return;
     }
     if (from && from.nav !== false) lastMain = from.id;
+    const t = K.tabs.filter(function (x) { return x.id === id; })[0];
+    // v23.1: a page that isn't one of the 4 tabs gets its own history entry, so phone Back returns here instead of closing the app
+    if (t && t.nav === false && K.current !== id && !popping) { try { history.pushState({ kawo: id }, ''); pushed++; } catch (e) {} }
     K.current = id;
     K.store.set('kawo.tab', id);
-    const t = K.tabs.filter(function (x) { return x.id === id; })[0];
     if (t && t.onEnter) t.onEnter();
     K.render();
     window.scrollTo(0, 0);
   };
-  K.back = function () {
+  let pushed = 0, popping = false;   // history entries we added for pages inside a tab
+  function backTarget() {
     const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
-    K.go((t && t.parent) || lastMain || LANDING);
+    return (t && t.parent) || lastMain || LANDING;
+  }
+  K.back = function () {
+    if (pushed > 0) { history.back(); return; }   // phone Back and the ← button do the same thing (popstate below)
+    K.go(backTarget());
   };
+  window.addEventListener('popstate', function () {
+    if (pushed > 0) pushed--;
+    const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
+    if (!t || t.nav !== false) return;   // already on a main tab: that Back press only used up a spare entry
+    if (t.unsaved && t.unsaved()) { try { history.pushState({ kawo: K.current }, ''); pushed++; } catch (e) {} }   // keep the page until they say ออกเลย
+    popping = true;
+    try { K.go(backTarget()); } finally { popping = false; }
+  });
 
   window.addEventListener('beforeunload', function (e) {
     const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];

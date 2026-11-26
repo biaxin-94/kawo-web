@@ -455,6 +455,9 @@
     }
     // v13.0: no red DEV banner any more (our family's real household lives on dev); the footer still says DEV.
     if (!K.canEdit()) b.push(el('div', { class: 'banner info', text: '👀 บัญชีนี้ดูได้อย่างเดียว' + (house ? 'ใน' + house : '') + ' ปุ่มแก้ไขจะกดไม่ได้' }));
+    // v23.0: the household is waiting to be deleted (admins can cancel in ⚙️ ตั้งค่าบ้าน)
+    if (K.S.meta && K.S.meta.deleting) b.push(el('div', { class: 'banner bad', text: '🗑️ บ้านนี้จะถูกลบข้อมูลทั้งหมดวันที่ ' + K.thDate(K.S.meta.deleting.day) +
+      ' ระหว่างนี้แก้ไขอะไรไม่ได้' + (K.isAdmin() ? ' · ยกเลิกได้ที่ ⚙️ ตั้งค่าบ้าน' : ' · ผู้ดูแลบ้านยกเลิกได้') }));
     K.tabs.forEach(function (t) { if (t.banner) { const n = t.banner(); if (n) b.push(n); } });
     banners.replaceChildren.apply(banners, b);
 

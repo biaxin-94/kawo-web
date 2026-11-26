@@ -42,8 +42,20 @@
           el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
           el('button', { class: 'btn primary', type: 'button', text: 'บันทึก', on: { click: save } }),
         ]),
+        // v23.0: ลบออกจากบ้าน (not for yourself; the server also keeps at least one admin)
+        m.me ? null : el('div', { class: 'btns' }, [
+          el('button', { class: 'btn danger', type: 'button', text: '🚪 ลบออกจากบ้าน', on: { click: function () { close(); removeMember(m); } } }),
+        ]),
       ];
     });
+  }
+
+  /** v23.0: confirm, then memberRemove. LINE can't take anyone out of a group, so the admin is told to do that. */
+  function removeMember(m) {
+    K.confirmSheet('ลบ ' + m.name + ' ออกจากบ้าน?',
+      m.name + ' จะเปิดแอปของบ้านนี้ไม่ได้ ' + her() + 'จะไม่ตอบ และจะไม่อยู่ในคนผลัดกันทำงานบ้าน (งานที่ถึงตาจะไปที่คนถัดไป) ' +
+      'ประวัติเดิมยังมีชื่ออยู่ · ไลน์ไม่ให้บอทเอาคนออกจากกลุ่ม ถ้าจะเอาออกจากกลุ่มไลน์ด้วย ต้องเอาออกเองในไลน์ · เพิ่มกลับได้ภายหลัง',
+      'ลบออกจากบ้าน', function () { K.write('memberRemove', { key: m.key }); }, true);
   }
 
   function renderMembersMulti(wrap) {
@@ -55,6 +67,19 @@
       const kids = [el('div', { class: 'main' }, [m.name + (m.me ? ' (ฉัน)' : ''), el('span', { class: 'sub', text: sub })]), admin ? el('span', { class: 'end', text: '✏️' }) : null];
       return admin ? el('button', { class: 'row', type: 'button', on: { click: function () { memberForm(m); } } }, kids) : el('div', { class: 'row' }, kids);
     })));
+    // v23.0: removed members (admins only get them from the server)
+    const gone = K.S.removedMembers || [];
+    if (admin && gone.length) {
+      wrap.appendChild(K.group('ลบออกจากบ้านแล้ว (' + gone.length + ')', gone.map(function (m) {
+        return el('div', { class: 'row' }, [
+          el('div', { class: 'main' }, [m.name, el('span', { class: 'sub', text: 'เปิดแอปไม่ได้ · ' + her() + 'ไม่ตอบ' })]),
+          el('button', { class: 'btn small', type: 'button', text: 'เพิ่มกลับ', on: { click: function () {
+            K.confirmSheet('เพิ่ม ' + m.name + ' กลับเข้าบ้าน?', 'จะได้สิทธิ์เหมือนสมาชิกใหม่ ใส่ในคนผลัดกันทำงานบ้านเองได้ที่ ตั้งค่าบ้าน', 'เพิ่มกลับ',
+              function () { K.write('memberReadd', { key: m.key }); });
+          } } }),
+        ]);
+      })));
+    }
   }
 
   function renderMembers(wrap) {
@@ -275,9 +300,42 @@
     }) : [el('div', { class: 'empty', text: 'ยังไม่มีเมนู' })]));
   }
 
+  /** v23.0: ลบข้อมูลบ้านทั้งหมด (type the household's name), or the cancel button while it waits. */
+  function renderDelete(wrap) {
+    const meta = K.S.meta;
+    if (meta.deleting) {
+      wrap.appendChild(K.group('🗑️ กำลังจะลบข้อมูลบ้าน', [
+        el('p', { class: 'hint', text: 'จะลบจริงวันที่ ' + K.thDate(meta.deleting.day) + ' ระหว่างนี้' + her() + 'ไม่ตอบและไม่ส่งข้อความในกลุ่ม' }),
+        el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'ยกเลิกการลบ', on: { click: function () { K.write('hhDeleteCancel', {}); } } })]),
+      ]));
+      return;
+    }
+    wrap.appendChild(K.group('ลบข้อมูลบ้านทั้งหมด', [
+      el('p', { class: 'hint', text: 'ลบของในตู้ รายการซื้อ เมนู งานบ้าน ประวัติ สมาชิก และสำเนาสำรองของบ้านนี้ ลบจริงหลังจากนี้ 7 วัน (ยกเลิกได้ก่อนนั้น) แล้ว' + her() + 'จะออกจากกลุ่มไลน์' }),
+      el('div', { class: 'btns' }, [el('button', { class: 'btn danger', type: 'button', text: '🗑️ ลบข้อมูลบ้านทั้งหมด', on: { click: function () {
+        K.sheet(function (close) {
+          const input = el('input', { maxlength: '40', placeholder: meta.houseName || '', 'aria-label': 'พิมพ์ชื่อบ้าน' });
+          return [
+            el('h3', { text: 'ลบข้อมูลบ้านทั้งหมด?' }),
+            el('div', { class: 'sub', text: 'พิมพ์ชื่อบ้าน "' + (meta.houseName || '') + '" เพื่อยืนยัน · ลบจริงหลังจากนี้ 7 วัน' }),
+            input,
+            el('div', { class: 'btns' }, [
+              el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
+              el('button', { class: 'btn primary danger', type: 'button', text: 'ลบข้อมูลบ้าน', on: { click: function () {
+                if (input.value.trim() !== String(meta.houseName || '').trim()) { input.focus(); input.setCustomValidity('ชื่อไม่ตรง'); input.reportValidity(); return; }
+                close(); K.write('hhDelete', { name: input.value.trim() });
+              } } }),
+            ]),
+          ];
+        });
+      } } })]),
+    ]));
+  }
+
   /* ---------------- ⚙️ ตั้งค่าบ้าน (v11.0, admins only) ---------------- */
   function renderHouse(wrap) {
     const meta = K.S.meta;
+    if (meta.deleting) return renderDelete(wrap);   // v23.0: nothing else can be changed while it waits
     // name
     const name = el('input', { value: meta.houseName || '', maxlength: '40', 'aria-label': 'ชื่อบ้าน' });
     wrap.appendChild(K.group('ชื่อบ้าน', [el('div', { class: 'row' }, [el('div', { class: 'main' }, [name]),
@@ -331,6 +389,7 @@
         K.write('hhSave', { catZones: out });
       } } })]),
     ])));
+    renderDelete(wrap);   // v23.0: last, away from the everyday settings
   }
 
   /* ---------------- tab ---------------- */

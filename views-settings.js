@@ -42,8 +42,20 @@
           el('button', { class: 'btn', type: 'button', text: 'ยกเลิก', on: { click: close } }),
           el('button', { class: 'btn primary', type: 'button', text: 'บันทึก', on: { click: save } }),
         ]),
+        // v23.0: ลบออกจากบ้าน (not for yourself; the server also keeps at least one admin)
+        m.me ? null : el('div', { class: 'btns' }, [
+          el('button', { class: 'btn danger', type: 'button', text: '🚪 ลบออกจากบ้าน', on: { click: function () { close(); removeMember(m); } } }),
+        ]),
       ];
     });
+  }
+
+  /** v23.0: confirm, then memberRemove. LINE can't take anyone out of a group, so the admin is told to do that. */
+  function removeMember(m) {
+    K.confirmSheet('ลบ ' + m.name + ' ออกจากบ้าน?',
+      m.name + ' จะเปิดแอปของบ้านนี้ไม่ได้ ' + her() + 'จะไม่ตอบ และจะไม่อยู่ในคนผลัดกันทำงานบ้าน (งานที่ถึงตาจะไปที่คนถัดไป) ' +
+      'ประวัติเดิมยังมีชื่ออยู่ · ไลน์ไม่ให้บอทเอาคนออกจากกลุ่ม ถ้าจะเอาออกจากกลุ่มไลน์ด้วย ต้องเอาออกเองในไลน์ · เพิ่มกลับได้ภายหลัง',
+      'ลบออกจากบ้าน', function () { K.write('memberRemove', { key: m.key }); }, true);
   }
 
   function renderMembersMulti(wrap) {
@@ -55,6 +67,19 @@
       const kids = [el('div', { class: 'main' }, [m.name + (m.me ? ' (ฉัน)' : ''), el('span', { class: 'sub', text: sub })]), admin ? el('span', { class: 'end', text: '✏️' }) : null];
       return admin ? el('button', { class: 'row', type: 'button', on: { click: function () { memberForm(m); } } }, kids) : el('div', { class: 'row' }, kids);
     })));
+    // v23.0: removed members (admins only get them from the server)
+    const gone = K.S.removedMembers || [];
+    if (admin && gone.length) {
+      wrap.appendChild(K.group('ลบออกจากบ้านแล้ว (' + gone.length + ')', gone.map(function (m) {
+        return el('div', { class: 'row' }, [
+          el('div', { class: 'main' }, [m.name, el('span', { class: 'sub', text: 'เปิดแอปไม่ได้ · ' + her() + 'ไม่ตอบ' })]),
+          el('button', { class: 'btn small', type: 'button', text: 'เพิ่มกลับ', on: { click: function () {
+            K.confirmSheet('เพิ่ม ' + m.name + ' กลับเข้าบ้าน?', 'จะได้สิทธิ์เหมือนสมาชิกใหม่ ใส่ในคนผลัดกันทำงานบ้านเองได้ที่ ตั้งค่าบ้าน', 'เพิ่มกลับ',
+              function () { K.write('memberReadd', { key: m.key }); });
+          } } }),
+        ]);
+      })));
+    }
   }
 
   function renderMembers(wrap) {

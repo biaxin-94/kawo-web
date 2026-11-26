@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '22.5';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '23.0';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -196,6 +196,11 @@
     if (res.households) K.S.households = res.households;
     if (res.hh) K.setHousehold(res.hh);
     if (res.state) Object.keys(res.state).forEach(function (k) { K.S[k] = res.state[k]; });
+    // v23.0: admins also get removed members; every page but ⚙️ สมาชิก uses K.S.members, which leaves them out
+    if (res.state && res.state.members) {
+      K.S.removedMembers = res.state.members.filter(function (m) { return m.removed; });
+      K.S.members = res.state.members.filter(function (m) { return !m.removed; });
+    }
     if (res.households) moveOldStorage();
   };
 

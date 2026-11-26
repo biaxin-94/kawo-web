@@ -331,3 +331,7 @@ button.row { width: 100%; text-align: left; }
 .cookbtn:active { background: var(--chip); }
 .unitpick { margin: 6px 0; }
 .usepart { flex-wrap: wrap; }
+
+/* v23.0: ประวัติ › an entry an admin undid stays, dimmed; the preview's lines */
+.hist .row.undone .main { opacity: .6; }
+.undo-lines { margin: 8px 0 4px; padding-left: 20px; font-size: 14px; line-height: 1.5; }

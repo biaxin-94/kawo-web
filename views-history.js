@@ -1,7 +1,8 @@
 /*
  * ประวัติ (v12.0): the household's item history, newest first, grouped by day; one line per batch
  * ("ปีเก้ ทำกะเพราไก่: ไก่ 1 ที่, ไข่ 2 ฟอง"). Filters: item, member, action. 7 days per page + "ดูเพิ่ม".
- * Read-only for everyone. The tab also has room for a future สถิติ section (SECTIONS below, hidden for now).
+ * Read-only for everyone. v23.0: admins get "ยกเลิกรายการนี้" on app actions of the last 7 days (preview, then undo);
+ * an undone entry stays, marked "ยกเลิกแล้ว · โดย <name>". The tab also has room for a future สถิติ section (SECTIONS below, hidden for now).
  */
 (function () {
   'use strict';
@@ -59,6 +60,29 @@
     return g.who + ' ' + (ACTION_TH[g.action] || g.action) + ' ' + items;
   }
 
+  /** v23.0: admin undo: the server says what would change, the admin confirms, then it is undone. */
+  async function adminUndo(g) {
+    const pv = await K.call('adminUndoPreview', { batch: g.undoId });
+    if (!pv.ok) { K.toast(K.errorText(pv), true); return; }
+    K.sheet(function (close) {
+      return [
+        el('h3', { text: pv.data.title }),
+        el('div', { class: 'sub', text: groupLine(g) }),
+        el('ul', { class: 'undo-lines' }, pv.data.lines.map(function (l) { return el('li', { text: l }); })),
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn', type: 'button', text: 'ไม่ยกเลิก', on: { click: close } }),
+          pv.data.can ? el('button', { class: 'btn primary danger', type: 'button', text: 'ยกเลิกรายการนี้', on: { click: async function () {
+            close();
+            const res = await K.write('adminUndo', { batch: g.undoId });
+            if (res && res.ok) { reset(); load(false); }
+          } } }) : null,
+        ]),
+      ];
+    });
+  }
+  function bkkDay(ms) { return new Date(ms + 7 * 3600e3).toISOString().slice(0, 10); }
+  function hhmm(ms) { const t = new Date(ms); return ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2); }
+
   function dayTitle(day) {
     const today = K.S.meta.today;
     const y = new Date(new Date(today + 'T12:00:00Z').getTime() - 864e5).toISOString().slice(0, 10);
@@ -82,9 +106,12 @@
       wrap.appendChild(el('div', { class: 'list hist' }, d.groups.map(function (g) {
         const t = new Date(g.time), hm = ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
         const buyers = g.action === 'toss' ? g.items.map(function (i) { return i.buyer; }).filter(function (b, i, a) { return a.indexOf(b) === i; }) : [];
-        return el('div', { class: 'row' }, [
+        const undone = g.undoneAt ? el('span', { class: 'sub', text: '↩️ ยกเลิกแล้ว' + (g.undoneBy ? ' · โดย ' + callOf(g.undoneBy) : '') + ' · ' +
+          (bkkDay(g.undoneAt) === d.day ? '' : K.thDate(bkkDay(g.undoneAt)) + ' ') + hhmm(g.undoneAt) }) : null;
+        return el('div', { class: 'row' + (g.undoneAt ? ' undone' : '') }, [
           el('span', { class: 'time', text: hm }),
-          el('div', { class: 'main' }, [groupLine(g), buyers.length ? el('span', { class: 'sub', text: 'ซื้อโดย ' + buyers.join(', ') }) : null]),
+          el('div', { class: 'main' }, [groupLine(g), buyers.length ? el('span', { class: 'sub', text: 'ซื้อโดย ' + buyers.join(', ') }) : null, undone]),
+          g.undoId && K.isAdmin() ? el('button', { class: 'btn small', type: 'button', text: 'ยกเลิก', 'aria-label': 'ยกเลิกรายการนี้', on: { click: function () { adminUndo(g); } } }) : null,
         ]);
       })));
     });

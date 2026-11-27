@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '24.1';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '24.3';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -547,5 +547,7 @@
     if (ok) K.tabs.forEach(function (t) { if (t.afterLoad) t.afterLoad(); });
     // v19.0: the welcome card's เริ่มต้นตู้ button opens the app with &page=setup
     if (ok && new URLSearchParams(location.search).get('page') === 'setup' && K.canEdit()) K.go('setup');
+    // v24.3: the LINE ตู้เย็น card's 📱 button opens the app on the main list with the "ทั้งหมด" filter (&page=all)
+    if (ok && new URLSearchParams(location.search).get('page') === 'all') { K.go('fridge'); if (K.showZone) K.showZone('all'); }
   };
 })();

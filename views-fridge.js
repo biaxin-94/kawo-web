@@ -81,22 +81,36 @@
     });
   }
 
+  /**
+   * v24.1: how many to move: quick chips (¼ ½ ¾ 1 ... ทั้งหมด) + a stepper that moves in ¼ steps for units that split,
+   * whole steps for ฟอง ที่ ชิ้น อัน. Starts at all. Returns {nodes, get()}.
+   */
+  function moveAmount(it, word, sp) {
+    const st = K.stepper(it.qty, sp ? 0.25 : 1, it.qty, word, null, { split: sp, step: sp ? 0.25 : 1 });
+    const cand = sp ? [0.25, 0.5, 0.75, 1, 2, 3] : [1, 2, 3, 4, 5];
+    const chips = cand.filter(function (n) { return n < it.qty; }).map(function (n) {
+      return el('button', { class: 'pill', type: 'button', text: K.fmtQty(n), on: { click: function () { st.set(n); } } });
+    });
+    chips.push(el('button', { class: 'pill', type: 'button', text: 'ทั้งหมด (' + K.fmtQty(it.qty) + ')', on: { click: function () { st.set(it.qty); } } }));
+    return { nodes: [el('div', { class: 'fchips' }, chips), st.node], get: st.get };
+  }
+
   /** ❄️ move: how many to move (default all), unchanged from v8.0. */
   function askMove(it, dest) {
-    if (it.type === 'flag' || it.qty <= 1) return doAct(it, 'mv', dest, it.qty);   // ½ แพ็ค moves whole
+    const sp0 = it.split || K.splits(it.type, it.unit);
+    if (it.type === 'flag' || it.qty <= (sp0 ? 0.25 : 1)) return doAct(it, 'mv', dest, it.qty);   // v24.1: 1 can can still move ¼
     K.sheet(function (close) {
       const word = K.unitWord(it.type, it.unit);
-      const sp = it.split || K.splits(it.type, it.unit);
-      const st = K.stepper(it.qty, sp ? 0.5 : 1, it.qty, word, null, { split: sp });
+      const sp = sp0;
+      const am = moveAmount(it, word, sp);
       return [
         el('h3', { text: 'ย้าย ' + it.name + ' กี่' + word + '?' }),
         el('div', { class: 'sub', text: 'มี ' + K.fmtQty(it.qty) + ' ' + word + ' → ' + K.locTh(dest) }),
-        st.node,
+      ].concat(am.nodes, [
         el('div', { class: 'btns' }, [
-          el('button', { class: 'btn', type: 'button', text: 'ทั้งหมด (' + K.fmtQty(it.qty) + ')', on: { click: function () { close(); doAct(it, 'mv', dest, it.qty); } } }),
-          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { close(); doAct(it, 'mv', dest, st.get()); } } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { const k = am.get(); close(); doAct(it, 'mv', dest, k); } } }),
         ]),
-      ];
+      ]);
     });
   }
 
@@ -105,19 +119,19 @@
     K.sheet(function (close) {
       const word = K.unitWord(it.type, it.unit);
       const sp = it.split || K.splits(it.type, it.unit);
-      const many = it.type !== 'flag' && it.qty > 1;
-      const st = many ? K.stepper(it.qty, sp ? 0.5 : 1, it.qty, word, null, { split: sp }) : null;
+      const many = it.type !== 'flag' && it.qty > (sp ? 0.25 : 1);
+      const am = many ? moveAmount(it, word, sp) : null;
       const dy = K.stepper(3, 1, 30, 'วัน', null, { label: 'เก็บได้กี่วัน' });
       return [
         el('h3', { text: '🧊 ย้าย ' + it.name + ' เข้าตู้เย็น' }),
         many ? el('div', { class: 'sub', text: 'ย้ายกี่' + word + '? (มี ' + K.fmtQty(it.qty) + ' ' + word + ')' }) : null,
-        st ? st.node : null,
+      ].concat(am ? am.nodes : [], [
         el('div', { class: 'sub', text: 'เก็บในตู้เย็นได้กี่วัน? (นับจากวันนี้ เปลี่ยนได้)' }),
         dy.node,
         el('div', { class: 'btns' }, [
-          el('button', { class: 'btn primary', type: 'button', text: 'ย้ายเลย', on: { click: function () { const k = st ? st.get() : it.qty; const d = dy.get(); close(); doAct(it, 'mv', 'Fridge', k, d); } } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'ย้ายเลย', on: { click: function () { const k = am ? am.get() : it.qty; const d = dy.get(); close(); doAct(it, 'mv', 'Fridge', k, d); } } }),
         ]),
-      ];
+      ]);
     });
   }
 

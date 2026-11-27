@@ -65,6 +65,11 @@
           toFreezer ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }) : null,
         ]));
       }
+      // v24.0: food from ตู้กับข้าว / นอกตู้ (an opened can, a pack) into ตู้เย็น with a short date; never ของใช้
+      if ((it.loc === 'Kitchen' || it.loc === 'Pantry') && it.cat !== 'Household' && K.zoneOn('Fridge')) {
+        nodes.push(el('div', { class: 'btns' }, [el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าตู้เย็น',
+          on: { click: function () { close(); askFridge(it); } } })]));
+      }
       // v17.0: menus that use this item (food only); soft sage when it should be used within 2 days
       if (it.loc !== 'Storage') {
         const soon = it.left !== null && it.left !== undefined && it.left <= 2 && !K.noExp(it.loc);
@@ -95,8 +100,31 @@
     });
   }
 
-  async function doAct(it, act, dest, n) {
-    const res = await K.write('itemAct', { id: it.id, act: act, dest: dest, n: n, expectQty: it.qty });
+  /** v24.0: 🧊 ย้ายเข้าตู้เย็น: how many (default all) and how many days it keeps (default 3, 1-30). */
+  function askFridge(it) {
+    K.sheet(function (close) {
+      const word = K.unitWord(it.type, it.unit);
+      const sp = it.split || K.splits(it.type, it.unit);
+      const many = it.type !== 'flag' && it.qty > 1;
+      const st = many ? K.stepper(it.qty, sp ? 0.5 : 1, it.qty, word, null, { split: sp }) : null;
+      const dy = K.stepper(3, 1, 30, 'วัน', null, { label: 'เก็บได้กี่วัน' });
+      return [
+        el('h3', { text: '🧊 ย้าย ' + it.name + ' เข้าตู้เย็น' }),
+        many ? el('div', { class: 'sub', text: 'ย้ายกี่' + word + '? (มี ' + K.fmtQty(it.qty) + ' ' + word + ')' }) : null,
+        st ? st.node : null,
+        el('div', { class: 'sub', text: 'เก็บในตู้เย็นได้กี่วัน? (นับจากวันนี้ เปลี่ยนได้)' }),
+        dy.node,
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn primary', type: 'button', text: 'ย้ายเลย', on: { click: function () { const k = st ? st.get() : it.qty; const d = dy.get(); close(); doAct(it, 'mv', 'Fridge', k, d); } } }),
+        ]),
+      ];
+    });
+  }
+
+  async function doAct(it, act, dest, n, days) {
+    const payload = { id: it.id, act: act, dest: dest, n: n, expectQty: it.qty };
+    if (days) payload.days = days;
+    const res = await K.write('itemAct', payload);
     if (res.ok && res.data.ranOut) offerList(res.data.ranOut);
   }
 

@@ -209,7 +209,8 @@ button.row { width: 100%; text-align: left; }
 .undobar { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-h) + 12px + env(safe-area-inset-bottom)); z-index: 19;
   display: flex; align-items: center; gap: 10px; background: var(--text); color: var(--bg); padding: 8px 8px 8px 14px; border-radius: 12px;
   box-shadow: var(--shadow); font-size: 15px; }   /* under sheets (z 20): it shows again when the sheet closes */
-.undobar .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undobar .txt { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.35; overflow-wrap: anywhere; }   /* v24.1: up to 3 lines */
+.undobar .btn { flex: 0 0 auto; }
 .undobar .btn { background: transparent; color: var(--bg); border-color: var(--bg); font-weight: 700; min-height: 40px; padding: 0 16px; }
 .undobar ~ .toast { bottom: calc(var(--nav-h) + 76px + env(safe-area-inset-bottom)); }
 

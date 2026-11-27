@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '24.0';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '24.1';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -290,7 +290,7 @@
     const old = K.$('undobar'); if (old) old.remove();
     clearTimeout(undoTimer);
     const t = K.$('toast'); if (t) t.remove();
-    const text = String(label || 'บันทึกแล้ว').split('\n')[0].slice(0, 80);
+    const text = String(label || 'บันทึกแล้ว').split('\n')[0].slice(0, 200);   // v24.1: wraps (up to 3 lines) instead of being cut
     const bar = el('div', { id: 'undobar', class: 'undobar', role: 'status' }, [
       el('span', { class: 'txt', text: text }),
       el('button', { class: 'btn small', type: 'button', text: 'เลิกทำ', on: { click: async function () {
@@ -304,7 +304,7 @@
       } } }),
     ]);
     document.body.appendChild(bar);
-    undoTimer = setTimeout(function () { bar.remove(); }, UNDO_SHOW_MS);
+    undoTimer = setTimeout(function () { bar.remove(); }, UNDO_SHOW_MS + (text.length > 40 ? 5000 : 0));   // v24.1: long text stays longer
   };
 
   /**
@@ -336,6 +336,7 @@
     // v22.0 opts.split: ½ steps for units that split (a typed ¼ is kept: amounts round to ¼)
     const input = el('input', { type: 'number', inputmode: opts.split ? 'decimal' : 'numeric', min: min, max: max, step: opts.split ? 0.25 : 1, value: value, 'aria-label': opts.label || 'จำนวน' });
     const clamp = function (v) { v = opts.split ? Math.round(Number(v) * 4) / 4 : Math.round(Number(v)); if (!isFinite(v)) v = min; return Math.max(min, Math.min(max, v)); };
+    const stepBy = function () { return opts.step || (opts.split ? 0.5 : 1); };   // v24.1: opts.step = 0.25 for the move sheets
     const set = function (v) {
       if (Number(v) < min && opts.onUnder) { opts.onUnder(); return; }
       input.value = clamp(v); if (onChange) onChange(Number(input.value));
@@ -343,13 +344,13 @@
     input.addEventListener('change', function () { set(input.value === '' ? min : input.value); });
     input.addEventListener('focus', function () { try { input.select(); } catch (e) { /* ignore */ } });
     const node = el('span', { class: 'stepper' }, [
-      el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - (opts.split ? 0.5 : 1)); } } }),
+      el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - stepBy()); } } }),
       input,
       unit ? el('span', { class: 'u', text: unit }) : null,
-      el('button', { type: 'button', 'aria-label': 'เพิ่ม', text: '+', on: { click: function () { set(Number(input.value) + (opts.split ? 0.5 : 1)); } } }),
+      el('button', { type: 'button', 'aria-label': 'เพิ่ม', text: '+', on: { click: function () { set(Number(input.value) + stepBy()); } } }),
     ]);
     const unitEl = node.querySelector ? node.querySelector('.u') : null;
-    return { node: node, get: function () { return clamp(input.value); },
+    return { node: node, get: function () { return clamp(input.value); }, set: function (v) { input.value = clamp(v); if (onChange) onChange(Number(input.value)); },
       setUnit: function (u, split) { if (unitEl) unitEl.textContent = u; opts.split = split; } };
   };
 

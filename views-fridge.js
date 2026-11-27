@@ -388,7 +388,7 @@
   let chip = K.store.get(K.hkey('chip.v1'), 'all');                 // remembered on the phone
   K.onHousehold(function () { chip = K.store.get(K.hkey('chip.v1'), 'all'); findQ = ''; });
   const SOON_DAYS = 2;
-  // v24.3: open the list on one zone (used by the LINE card's 📱 button: ?page=kitchen)
+  // v24.3: open the list on one zone (used by the LINE card's 📱 button: ?page=all)
   K.showZone = function (z) { part = 'fridge'; chip = z; K.store.set(K.hkey('chip.v1'), chip); K.render(); };
   const CHIP_TH = { Fridge: 'ตู้เย็น', Chill: 'Chill', Freezer: 'ฟรีซ', Pantry: 'นอกตู้', Kitchen: 'ตู้กับข้าว' };
   function aliasesOf(name) { const d = K.dictEntry(name); return d ? d.aliases : ''; }

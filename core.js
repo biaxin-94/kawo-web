@@ -547,7 +547,7 @@
     if (ok) K.tabs.forEach(function (t) { if (t.afterLoad) t.afterLoad(); });
     // v19.0: the welcome card's เริ่มต้นตู้ button opens the app with &page=setup
     if (ok && new URLSearchParams(location.search).get('page') === 'setup' && K.canEdit()) K.go('setup');
-    // v24.3: the LINE ตู้เย็น card's 📱 button opens the app on ตู้กับข้าว (&page=kitchen)
-    if (ok && new URLSearchParams(location.search).get('page') === 'kitchen') { K.go('fridge'); if (K.showZone) K.showZone('Kitchen'); }
+    // v24.3: the LINE ตู้เย็น card's 📱 button opens the app on the main list with the "ทั้งหมด" filter (&page=all)
+    if (ok && new URLSearchParams(location.search).get('page') === 'all') { K.go('fridge'); if (K.showZone) K.showZone('all'); }
   };
 })();

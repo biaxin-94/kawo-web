@@ -421,7 +421,7 @@
     let shown = 0;
     wrap.querySelectorAll('.zone').forEach(function (sec) {
       let n = 0;
-      sec.querySelectorAll('.rowwrap[data-s], .list > .row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
+      sec.querySelectorAll('.list > .row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
       const empty = sec.querySelector('.list > .empty');
       if (empty) empty.hidden = !!q;
       sec.hidden = !!q && !n;
@@ -465,11 +465,8 @@
     const row = el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, 'data-s': searchText(i), on: { click: function () { openItem(i); } } }, [
       itemLine(i, true), K.noExp(i.loc) ? null : el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
     ]);
-    if (i.loc === 'Storage') return row;
-    // v22.0: a small 🍳 beside each food row: menus that use it (the ✅ / 🗑 stay in the item's sheet, away from it)
-    return el('div', { class: 'rowwrap', 'data-name': i.name, 'data-s': searchText(i) }, [row,
-      el('button', { class: 'cookbtn', type: 'button', 'aria-label': 'เมนูที่ใช้' + i.name, title: 'ทำเมนูจาก' + i.name, text: '🍳',
-        on: { click: function (e) { e.stopPropagation(); K.openCookFor(i); } } })]);
+    // v24.2: the 🍳 button beside each row is gone (the item sheet still has 🍳 ทำเมนูจากของนี้): the row uses the full width
+    return row;
   }
 
   /** A section: pinned header "🧊 ตู้เย็น (12)" that folds, a light zone tint behind the cards. */

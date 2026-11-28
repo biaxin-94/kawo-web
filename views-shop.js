@@ -145,16 +145,20 @@
 
   function addExtra() {
     K.pickItem('ซื้อเพิ่ม (นอกรายการ)', function (d) {
-      const go = function (qty, unit) {
+      // v24.0: cooked food (แกง, ข้าวสุก ...) can keep its own number of days in the fridge
+      const cooked = d.cat === 'Cooked';
+      const go = function (qty, unit, days) {
         unit = unit || d.unit || '';
-        const ex = shop.extras.filter(function (x) { return x.name === d.name && (x.unit || d.unit || '') === unit; })[0];
-        if (ex) ex.qty += qty; else shop.extras.push({ name: d.name, qty: qty, unit: unit });
+        const ex = shop.extras.filter(function (x) { return x.name === d.name && (x.unit || d.unit || '') === unit && (x.days || 0) === (days || 0); })[0];
+        if (ex) ex.qty += qty; else { const x = { name: d.name, qty: qty, unit: unit }; if (days) x.days = days; shop.extras.push(x); }
         save(); K.render();
       };
-      if (d.type === 'flag') return go(1);
+      if (d.type === 'flag' && !cooked) return go(1);
       K.sheet(function (close) {
-        const box = amountBox(d.type, d.units, d.unit, d.defQty > 0 ? d.defQty : 1);
-        return [el('h3', { text: d.name })].concat(box.nodes, [el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { close(); go(box.qty(), box.unit()); } } })])]);
+        const box = d.type === 'flag' ? { nodes: [], qty: function () { return 1; }, unit: function () { return ''; } } : amountBox(d.type, d.units, d.unit, d.defQty > 0 ? d.defQty : 1);
+        const dy = cooked ? K.stepper(d.fridge > 0 ? Math.min(30, d.fridge) : 3, 1, 30, 'วัน', null, { label: 'เก็บได้กี่วัน' }) : null;
+        return [el('h3', { text: d.name })].concat(box.nodes, cooked ? [el('div', { class: 'sub', text: 'เก็บในตู้เย็นได้กี่วัน? (เปลี่ยนได้)' }), dy.node] : [],
+          [el('div', { class: 'btns' }, [el('button', { class: 'btn primary', type: 'button', text: 'เพิ่ม', on: { click: function () { const dd = dy ? dy.get() : 0; close(); go(box.qty(), box.unit(), dd); } } })])]);
       });
     });
   }
@@ -180,7 +184,7 @@
     wrap.appendChild(K.group('➕ ซื้อเพิ่ม (นอกรายการ)', shop.extras.length ? shop.extras.map(function (x, i) {
       return el('div', { class: 'row nodate picked' }, [
         el('span', { class: 'check', text: '✓' }),
-        el('div', { class: 'main', text: label(x.name, x.qty, x.unit) }),
+        el('div', { class: 'main', text: label(x.name, x.qty, x.unit) + (x.days ? ' · เก็บ ' + x.days + ' วัน' : '') }),
         el('button', { class: 'pill', type: 'button', text: 'เอาออก', on: { click: function () { shop.extras.splice(i, 1); save(); K.render(); } } }),
       ]);
     }) : [el('div', { class: 'empty', text: 'ยังไม่มี' })]));

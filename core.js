@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '22.3';   // must match VERSION in Code.js (the page warns if not)
+  const APP_VERSION = '24.4';   // must match VERSION in Code.js (the page warns if not)
   const CFG = window.KAWO_CONFIG || {};
   const ERRORS = {
     auth: 'ยืนยันตัวตนไม่สำเร็จ ลองปิดแล้วเปิดหน้านี้ใหม่จาก LINE',
@@ -196,6 +196,11 @@
     if (res.households) K.S.households = res.households;
     if (res.hh) K.setHousehold(res.hh);
     if (res.state) Object.keys(res.state).forEach(function (k) { K.S[k] = res.state[k]; });
+    // v23.0: admins also get removed members; every page but ⚙️ สมาชิก uses K.S.members, which leaves them out
+    if (res.state && res.state.members) {
+      K.S.removedMembers = res.state.members.filter(function (m) { return m.removed; });
+      K.S.members = res.state.members.filter(function (m) { return !m.removed; });
+    }
     if (res.households) moveOldStorage();
   };
 
@@ -285,7 +290,7 @@
     const old = K.$('undobar'); if (old) old.remove();
     clearTimeout(undoTimer);
     const t = K.$('toast'); if (t) t.remove();
-    const text = String(label || 'บันทึกแล้ว').split('\n')[0].slice(0, 80);
+    const text = String(label || 'บันทึกแล้ว').split('\n')[0].slice(0, 200);   // v24.1: wraps (up to 3 lines) instead of being cut
     const bar = el('div', { id: 'undobar', class: 'undobar', role: 'status' }, [
       el('span', { class: 'txt', text: text }),
       el('button', { class: 'btn small', type: 'button', text: 'เลิกทำ', on: { click: async function () {
@@ -299,7 +304,7 @@
       } } }),
     ]);
     document.body.appendChild(bar);
-    undoTimer = setTimeout(function () { bar.remove(); }, UNDO_SHOW_MS);
+    undoTimer = setTimeout(function () { bar.remove(); }, UNDO_SHOW_MS + (text.length > 40 ? 5000 : 0));   // v24.1: long text stays longer
   };
 
   /**
@@ -331,6 +336,7 @@
     // v22.0 opts.split: ½ steps for units that split (a typed ¼ is kept: amounts round to ¼)
     const input = el('input', { type: 'number', inputmode: opts.split ? 'decimal' : 'numeric', min: min, max: max, step: opts.split ? 0.25 : 1, value: value, 'aria-label': opts.label || 'จำนวน' });
     const clamp = function (v) { v = opts.split ? Math.round(Number(v) * 4) / 4 : Math.round(Number(v)); if (!isFinite(v)) v = min; return Math.max(min, Math.min(max, v)); };
+    const stepBy = function () { return opts.step || (opts.split ? 0.5 : 1); };   // v24.1: opts.step = 0.25 for the move sheets
     const set = function (v) {
       if (Number(v) < min && opts.onUnder) { opts.onUnder(); return; }
       input.value = clamp(v); if (onChange) onChange(Number(input.value));
@@ -338,13 +344,13 @@
     input.addEventListener('change', function () { set(input.value === '' ? min : input.value); });
     input.addEventListener('focus', function () { try { input.select(); } catch (e) { /* ignore */ } });
     const node = el('span', { class: 'stepper' }, [
-      el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - (opts.split ? 0.5 : 1)); } } }),
+      el('button', { type: 'button', 'aria-label': 'ลด', text: '−', on: { click: function () { set(Number(input.value) - stepBy()); } } }),
       input,
       unit ? el('span', { class: 'u', text: unit }) : null,
-      el('button', { type: 'button', 'aria-label': 'เพิ่ม', text: '+', on: { click: function () { set(Number(input.value) + (opts.split ? 0.5 : 1)); } } }),
+      el('button', { type: 'button', 'aria-label': 'เพิ่ม', text: '+', on: { click: function () { set(Number(input.value) + stepBy()); } } }),
     ]);
     const unitEl = node.querySelector ? node.querySelector('.u') : null;
-    return { node: node, get: function () { return clamp(input.value); },
+    return { node: node, get: function () { return clamp(input.value); }, set: function (v) { input.value = clamp(v); if (onChange) onChange(Number(input.value)); },
       setUnit: function (u, split) { if (unitEl) unitEl.textContent = u; opts.split = split; } };
   };
 
@@ -409,17 +415,32 @@
       return;
     }
     if (from && from.nav !== false) lastMain = from.id;
+    const t = K.tabs.filter(function (x) { return x.id === id; })[0];
+    // v23.1: a page that isn't one of the 4 tabs gets its own history entry, so phone Back returns here instead of closing the app
+    if (t && t.nav === false && K.current !== id && !popping) { try { history.pushState({ kawo: id }, ''); pushed++; } catch (e) {} }
     K.current = id;
     K.store.set('kawo.tab', id);
-    const t = K.tabs.filter(function (x) { return x.id === id; })[0];
     if (t && t.onEnter) t.onEnter();
     K.render();
     window.scrollTo(0, 0);
   };
-  K.back = function () {
+  let pushed = 0, popping = false;   // history entries we added for pages inside a tab
+  function backTarget() {
     const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
-    K.go((t && t.parent) || lastMain || LANDING);
+    return (t && t.parent) || lastMain || LANDING;
+  }
+  K.back = function () {
+    if (pushed > 0) { history.back(); return; }   // phone Back and the ← button do the same thing (popstate below)
+    K.go(backTarget());
   };
+  window.addEventListener('popstate', function () {
+    if (pushed > 0) pushed--;
+    const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
+    if (!t || t.nav !== false) return;   // already on a main tab: that Back press only used up a spare entry
+    if (t.unsaved && t.unsaved()) { try { history.pushState({ kawo: K.current }, ''); pushed++; } catch (e) {} }   // keep the page until they say ออกเลย
+    popping = true;
+    try { K.go(backTarget()); } finally { popping = false; }
+  });
 
   window.addEventListener('beforeunload', function (e) {
     const t = K.tabs.filter(function (x) { return x.id === K.current; })[0];
@@ -450,6 +471,9 @@
     }
     // v13.0: no red DEV banner any more (our family's real household lives on dev); the footer still says DEV.
     if (!K.canEdit()) b.push(el('div', { class: 'banner info', text: '👀 บัญชีนี้ดูได้อย่างเดียว' + (house ? 'ใน' + house : '') + ' ปุ่มแก้ไขจะกดไม่ได้' }));
+    // v23.0: the household is waiting to be deleted (admins can cancel in ⚙️ ตั้งค่าบ้าน)
+    if (K.S.meta && K.S.meta.deleting) b.push(el('div', { class: 'banner bad', text: '🗑️ บ้านนี้จะถูกลบข้อมูลทั้งหมดวันที่ ' + K.thDate(K.S.meta.deleting.day) +
+      ' ระหว่างนี้แก้ไขอะไรไม่ได้' + (K.isAdmin() ? ' · ยกเลิกได้ที่ ⚙️ ตั้งค่าบ้าน' : ' · ผู้ดูแลบ้านยกเลิกได้') }));
     K.tabs.forEach(function (t) { if (t.banner) { const n = t.banner(); if (n) b.push(n); } });
     banners.replaceChildren.apply(banners, b);
 
@@ -523,5 +547,7 @@
     if (ok) K.tabs.forEach(function (t) { if (t.afterLoad) t.afterLoad(); });
     // v19.0: the welcome card's เริ่มต้นตู้ button opens the app with &page=setup
     if (ok && new URLSearchParams(location.search).get('page') === 'setup' && K.canEdit()) K.go('setup');
+    // v24.3: the LINE ตู้เย็น card's 📱 button opens the app on the main list with the "ทั้งหมด" filter (&page=all)
+    if (ok && new URLSearchParams(location.search).get('page') === 'all') { K.go('fridge'); if (K.showZone) K.showZone('all'); }
   };
 })();

@@ -51,7 +51,11 @@
       if (st) nodes.push(el('div', { class: 'amount' }, [el('span', { class: 'sub', text: 'จำนวน (มี ' + K.fmtQty(it.qty) + ' ' + word + ')' }), st.node]));
       nodes.push(el('div', { class: 'btns' }, [
         split && !st ? null : el('button', { class: 'btn primary', type: 'button', disabled: !can, text: '✅ ใช้', on: { click: function () { const k = n(); close(); doAct(it, 'used', null, k); } } }),
-        el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () { const k = n(); close(); doAct(it, 'toss', null, k); } } }),
+        el('button', { class: 'btn danger', type: 'button', disabled: !can, text: '🗑 ทิ้ง', on: { click: function () {
+          const k = n();
+          close();
+          K.confirmSheet('ทิ้ง ' + it.name + ' ' + (K.qtyText(it.type, k, it.unit) || '') + ' ใช่ไหม?', 'ถ้ากดผิด กดเลิกทำได้ทันที', '🗑 ทิ้ง', function () { doAct(it, 'toss', null, k); }, true);
+        } } }),
       ]));
       const toChill = it.loc !== 'Chill' && K.zoneOn('Chill'), toFreezer = K.zoneOn('Freezer');   // v11.0: zones this household uses
       if (!K.noExp(it.loc) && it.loc !== 'Freezer' && (toChill || toFreezer)) {
@@ -60,6 +64,11 @@
           toChill ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '🌡️ ย้ายเข้า Chill', on: { click: function () { mv('Chill'); } } }) : null,
           toFreezer ? el('button', { class: 'btn', type: 'button', disabled: !can, text: '❄️ ย้ายเข้าช่องฟรีซ', on: { click: function () { mv('Freezer'); } } }) : null,
         ]));
+      }
+      // v24.0: food from ตู้กับข้าว / นอกตู้ (an opened can, a pack) into ตู้เย็น with a short date; never ของใช้
+      if ((it.loc === 'Kitchen' || it.loc === 'Pantry') && it.cat !== 'Household' && K.zoneOn('Fridge')) {
+        nodes.push(el('div', { class: 'btns' }, [el('button', { class: 'btn', type: 'button', disabled: !can, text: '🧊 ย้ายเข้าตู้เย็น',
+          on: { click: function () { close(); askFridge(it); } } })]));
       }
       // v17.0: menus that use this item (food only); soft sage when it should be used within 2 days
       if (it.loc !== 'Storage') {
@@ -72,27 +81,64 @@
     });
   }
 
+  /**
+   * v24.1: how many to move: quick chips (¼ ½ ¾ 1 ... ทั้งหมด) + a stepper that moves in ¼ steps for units that split,
+   * whole steps for ฟอง ที่ ชิ้น อัน. Starts at all. Returns {nodes, get()}.
+   */
+  function moveAmount(it, word, sp) {
+    const st = K.stepper(it.qty, sp ? 0.25 : 1, it.qty, word, null, { split: sp, step: sp ? 0.25 : 1 });
+    const cand = sp ? [0.25, 0.5, 0.75, 1, 2, 3] : [1, 2, 3, 4, 5];
+    const chips = cand.filter(function (n) { return n < it.qty; }).map(function (n) {
+      return el('button', { class: 'pill', type: 'button', text: K.fmtQty(n), on: { click: function () { st.set(n); } } });
+    });
+    chips.push(el('button', { class: 'pill', type: 'button', text: 'ทั้งหมด (' + K.fmtQty(it.qty) + ')', on: { click: function () { st.set(it.qty); } } }));
+    return { nodes: [el('div', { class: 'fchips' }, chips), st.node], get: st.get };
+  }
+
   /** ❄️ move: how many to move (default all), unchanged from v8.0. */
   function askMove(it, dest) {
-    if (it.type === 'flag' || it.qty <= 1) return doAct(it, 'mv', dest, it.qty);   // ½ แพ็ค moves whole
+    const sp0 = it.split || K.splits(it.type, it.unit);
+    if (it.type === 'flag' || it.qty <= (sp0 ? 0.25 : 1)) return doAct(it, 'mv', dest, it.qty);   // v24.1: 1 can can still move ¼
     K.sheet(function (close) {
       const word = K.unitWord(it.type, it.unit);
-      const sp = it.split || K.splits(it.type, it.unit);
-      const st = K.stepper(it.qty, sp ? 0.5 : 1, it.qty, word, null, { split: sp });
+      const sp = sp0;
+      const am = moveAmount(it, word, sp);
       return [
         el('h3', { text: 'ย้าย ' + it.name + ' กี่' + word + '?' }),
         el('div', { class: 'sub', text: 'มี ' + K.fmtQty(it.qty) + ' ' + word + ' → ' + K.locTh(dest) }),
-        st.node,
+      ].concat(am.nodes, [
         el('div', { class: 'btns' }, [
-          el('button', { class: 'btn', type: 'button', text: 'ทั้งหมด (' + K.fmtQty(it.qty) + ')', on: { click: function () { close(); doAct(it, 'mv', dest, it.qty); } } }),
-          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { close(); doAct(it, 'mv', dest, st.get()); } } }),
+          el('button', { class: 'btn primary', type: 'button', text: 'ตกลง', on: { click: function () { const k = am.get(); close(); doAct(it, 'mv', dest, k); } } }),
         ]),
-      ];
+      ]);
     });
   }
 
-  async function doAct(it, act, dest, n) {
-    const res = await K.write('itemAct', { id: it.id, act: act, dest: dest, n: n, expectQty: it.qty });
+  /** v24.0: 🧊 ย้ายเข้าตู้เย็น: how many (default all) and how many days it keeps (default 3, 1-30). */
+  function askFridge(it) {
+    K.sheet(function (close) {
+      const word = K.unitWord(it.type, it.unit);
+      const sp = it.split || K.splits(it.type, it.unit);
+      const many = it.type !== 'flag' && it.qty > (sp ? 0.25 : 1);
+      const am = many ? moveAmount(it, word, sp) : null;
+      const dy = K.stepper(3, 1, 30, 'วัน', null, { label: 'เก็บได้กี่วัน' });
+      return [
+        el('h3', { text: '🧊 ย้าย ' + it.name + ' เข้าตู้เย็น' }),
+        many ? el('div', { class: 'sub', text: 'ย้ายกี่' + word + '? (มี ' + K.fmtQty(it.qty) + ' ' + word + ')' }) : null,
+      ].concat(am ? am.nodes : [], [
+        el('div', { class: 'sub', text: 'เก็บในตู้เย็นได้กี่วัน? (นับจากวันนี้ เปลี่ยนได้)' }),
+        dy.node,
+        el('div', { class: 'btns' }, [
+          el('button', { class: 'btn primary', type: 'button', text: 'ย้ายเลย', on: { click: function () { const k = am ? am.get() : it.qty; const d = dy.get(); close(); doAct(it, 'mv', 'Fridge', k, d); } } }),
+        ]),
+      ]);
+    });
+  }
+
+  async function doAct(it, act, dest, n, days) {
+    const payload = { id: it.id, act: act, dest: dest, n: n, expectQty: it.qty };
+    if (days) payload.days = days;
+    const res = await K.write('itemAct', payload);
     if (res.ok && res.data.ranOut) offerList(res.data.ranOut);
   }
 
@@ -342,6 +388,8 @@
   let chip = K.store.get(K.hkey('chip.v1'), 'all');                 // remembered on the phone
   K.onHousehold(function () { chip = K.store.get(K.hkey('chip.v1'), 'all'); findQ = ''; });
   const SOON_DAYS = 2;
+  // v24.3: open the list on one zone (used by the LINE card's 📱 button: ?page=all)
+  K.showZone = function (z) { part = 'fridge'; chip = z; K.store.set(K.hkey('chip.v1'), chip); K.render(); };
   const CHIP_TH = { Fridge: 'ตู้เย็น', Chill: 'Chill', Freezer: 'ฟรีซ', Pantry: 'นอกตู้', Kitchen: 'ตู้กับข้าว' };
   function aliasesOf(name) { const d = K.dictEntry(name); return d ? d.aliases : ''; }
   function searchText(i) { return (i.name + ' ' + aliasesOf(i.name)).toLowerCase(); }
@@ -375,7 +423,7 @@
     let shown = 0;
     wrap.querySelectorAll('.zone').forEach(function (sec) {
       let n = 0;
-      sec.querySelectorAll('.rowwrap[data-s], .list > .row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
+      sec.querySelectorAll('.list > .row[data-s]').forEach(function (r) { const ok = !q || r.getAttribute('data-s').indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
       const empty = sec.querySelector('.list > .empty');
       if (empty) empty.hidden = !!q;
       sec.hidden = !!q && !n;
@@ -419,11 +467,8 @@
     const row = el('button', { class: 'row ' + K.fresh(i), type: 'button', 'data-name': i.name, 'data-s': searchText(i), on: { click: function () { openItem(i); } } }, [
       itemLine(i, true), K.noExp(i.loc) ? null : el('div', { class: 'end', text: K.leftText(i.left, i.exp) }),
     ]);
-    if (i.loc === 'Storage') return row;
-    // v22.0: a small 🍳 beside each food row: menus that use it (the ✅ / 🗑 stay in the item's sheet, away from it)
-    return el('div', { class: 'rowwrap', 'data-name': i.name, 'data-s': searchText(i) }, [row,
-      el('button', { class: 'cookbtn', type: 'button', 'aria-label': 'เมนูที่ใช้' + i.name, title: 'ทำเมนูจาก' + i.name, text: '🍳',
-        on: { click: function (e) { e.stopPropagation(); K.openCookFor(i); } } })]);
+    // v24.2: the 🍳 button beside each row is gone (the item sheet still has 🍳 ทำเมนูจากของนี้): the row uses the full width
+    return row;
   }
 
   /** A section: pinned header "🧊 ตู้เย็น (12)" that folds, a light zone tint behind the cards. */
